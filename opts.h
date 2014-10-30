@@ -49,13 +49,12 @@ struct Opts : public std::map<std::string,std::string>
 	// Channels to join on connect
 	std::list<std::string> autojoin;
 
-	// Direct access to the config
+	bool has(const std::string &key) const;
 	const std::string &operator[](const std::string &key) const;
 	std::string &operator[](const std::string &key);
 
 	template<class T> using non_num_t = typename std::enable_if<!std::is_arithmetic<T>(),T>::type;
 	template<class T> using num_t = typename std::enable_if<std::is_arithmetic<T>::value,T>::type;
-
 	template<class T> non_num_t<T> get(const std::string &key) const;
 	template<class T> num_t<T> get(const std::string &key) const;
 
@@ -166,6 +165,17 @@ const
 		throw std::out_of_range("Key not found");
 
 	return it->second;
+}
+
+
+inline
+bool Opts::has(const std::string &key)
+const
+{
+	if(count(key) == 0)
+		return false;
+
+	return !at(key).empty();
 }
 
 
