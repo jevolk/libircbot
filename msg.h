@@ -116,10 +116,11 @@ inline
 Msg::Msg(std::istream &stream):
 origin([&]() -> Mask
 {
-	if(stream.eof() || stream.get() != ':')
+	if(stream.eof() || stream.peek() != ':')
 		return {};
 
 	Mask ret;
+	stream.ignore(1,':');
 	std::getline(stream,ret,' ');
 	return ret;
 }()),
@@ -137,10 +138,14 @@ params([&]() -> Params
 
 	std::string str;
 	std::getline(stream,str,'\r');
+	if(str.empty())
+		return {};
+
+	if(str[0] == ':')
+		return {{str.substr(1)}};
 
 	static const delim d(" ");
-	const auto col = str.find(':');
-
+	const auto col = str.find(" :");
 	if(col == std::string::npos)
 	{
 		const boost::tokenizer<delim> tk(str,d);
@@ -148,7 +153,7 @@ params([&]() -> Params
 	}
 
 	const std::string &par = str.substr(0,col);
-	const std::string &trail = str.substr(col+1);
+	const std::string &trail = str.substr(col+2);
 	const boost::tokenizer<delim> tk(par,d);
 	Params ret(tk.begin(),tk.end());
 	ret.emplace_back(trail);
