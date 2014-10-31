@@ -237,6 +237,7 @@ class Bot : public std::mutex
 	void handle_isupport(const Msg &m);
 	void handle_yourhost(const Msg &m);
 	void handle_welcome(const Msg &m);
+	void handle_ping(const Msg &m);
 	void dispatch(const Msg &msg);
 
   private:

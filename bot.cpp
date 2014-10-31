@@ -145,6 +145,7 @@ void Bot::dispatch(const Msg &msg)
 			case hash("MODE"):             handle_mode(msg);                return;
 			case hash("PART"):             handle_part(msg);                return;
 			case hash("JOIN"):             handle_join(msg);                return;
+			case hash("PING"):             handle_ping(msg);                return;
 			case hash("QUIT"):             handle_quit(msg);                return;
 			case hash("NICK"):             handle_nick(msg);                return;
 			case hash("CAP"):              handle_cap(msg);                 return;
@@ -209,6 +210,16 @@ void Bot::dispatch(const Msg &msg)
 		case LIBIRC_RFC_ERR_CANNOTSENDTOCHAN:     handle_cannotsendtochan(msg);        return;
 		default:                                  handle_unhandled(msg);               return;
 	}
+}
+
+
+void Bot::handle_ping(const Msg &msg)
+{
+	using namespace fmt::PING;
+
+	log_handle(msg,"PING");
+
+	Quote(sess,"PONG") << msg[SOURCE];
 }
 
 

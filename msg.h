@@ -11,6 +11,7 @@
 
 inline namespace fmt
 {
+SPQF_FMT( PING,              SOURCE                                                                          )
 SPQF_FMT( WELCOME,           TEXT                                                                            )
 SPQF_FMT( YOURHOST,          SELFNAME, TEXT                                                                  )
 SPQF_FMT( CREATED,           SELFNAME, TEXT                                                                  )
