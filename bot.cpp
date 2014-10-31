@@ -23,17 +23,18 @@ adb([&]
 	mkdir(opts["dbdir"].c_str(),0777);
 	return opts["dbdir"] + "/ircbot";
 }()),
-sess(*this,opts,callbacks),
+sess(static_cast<std::mutex &>(*this),opts),
 users(adb,sess),
 chans(adb,sess),
 ns(adb,sess,users,chans),
 cs(adb,sess,chans),
-logs(chans,users,*this)
+logs(sess,chans,users)
 {
 	users.set_service(ns);
 	chans.set_service(cs);
 
-	irc_set_ctx(sess,this);
+	if(opts.get<bool>("connect"))
+		sess.connect();
 }
 catch(const Internal &e)
 {
@@ -44,7 +45,8 @@ catch(const Internal &e)
 Bot::~Bot(void)
 noexcept try
 {
-	sess.disconn();
+	sess.disconnect();
+
 }
 catch(const Internal &e)
 {
@@ -59,29 +61,72 @@ void Bot::quit()
 }
 
 
-void Bot::operator()()
+void Bot::operator()(const Loop &loop)
 try
 {
-	Sess &sess = get_sess();
-	irc_call(sess,irc_run);                            // Loops forever here
+	switch(loop)
+	{
+		case FOREGROUND:               // TODO: reset
+			new_handle();
+			recvq::worker();
+			break;
+
+		case BACKGROUND:               // TODO: pool mgmt
+			recvq::add_thread();
+			new_handle();
+			break;
+	}
 }
 catch(const Internal &e)
 {
-	switch(e.code())
-	{
-		case 15:
-			std::cout << "libircclient worker exiting: " << e << std::endl;
-			return;
+	std::cerr << "\033[1;31mBot::run(): unhandled:\033[0m " << e << std::endl;
+	throw;
+}
+catch(const Interrupted &e)
+{
+	return;
+}
 
-		default:
-			std::cerr << "\033[1;31mBot::run(): unhandled:\033[0m " << e << std::endl;
-			throw;
+
+void Bot::new_handle()
+{
+	set_handle(std::make_shared<boost::asio::streambuf>());
+}
+
+
+void Bot::set_handle(std::shared_ptr<boost::asio::streambuf> buf)
+{
+	namespace ph = std::placeholders;
+
+	Sess &sess = get_sess();
+	Socket &sock = sess.get_socket();
+
+	const auto hf = std::bind(&Bot::handle_pck,this,ph::_1,ph::_2,buf);
+	boost::asio::async_read_until(sock.get_sd(),*buf,"\r\n",hf);
+}
+
+
+void Bot::handle_pck(const boost::system::error_code &e,
+                     size_t size,
+                     std::shared_ptr<boost::asio::streambuf> buf)
+{
+	if(e)
+		throw Interrupted(e.value(),e.message());
+
+	auto &sbuf = *buf;
+	std::istream istr(&sbuf);
+	const Msg msg(istr);
+
+	{
+		const std::lock_guard<Bot> lock(*this);
+		dispatch(msg);
 	}
+
+	set_handle(buf);
 }
 
 
 void Bot::dispatch(const Msg &msg)
-try
 {
 	switch(msg.get_code())
 	{
@@ -95,10 +140,8 @@ try
 			case hash("NOTICE"):           handle_notice(msg);              return;
 			case hash("ACTION"):           handle_action(msg);              return;
 			case hash("PRIVMSG"):          handle_privmsg(msg);             return;
-			case hash("CHANNEL"):          handle_chanmsg(msg);             return;
 			case hash("KICK"):             handle_kick(msg);                return;
 			case hash("TOPIC"):            handle_topic(msg);               return;
-			case hash("UMODE"):            handle_umode(msg);               return;
 			case hash("MODE"):             handle_mode(msg);                return;
 			case hash("PART"):             handle_part(msg);                return;
 			case hash("JOIN"):             handle_join(msg);                return;
@@ -106,7 +149,6 @@ try
 			case hash("NICK"):             handle_nick(msg);                return;
 			case hash("CAP"):              handle_cap(msg);                 return;
 			case hash("AUTHENTICATE"):     handle_authenticate(msg);        return;
-			case hash("CONNECT"):          handle_conn(msg);                return;
 			case hash("ERROR"):            handle_error(msg);               return;
 			default:                       handle_unhandled(msg);           return;
 		}
@@ -168,29 +210,11 @@ try
 		default:                                  handle_unhandled(msg);               return;
 	}
 }
-catch(const Internal &e)
-{
-	std::cerr << "\033[1;37;41mDispatch Internal:\033[0m"
-	          << " [\033[1;31m" << e << "\033[0m]"
-	          << " Message: [\033[1;31m" << msg << "\033[0;0m]"
-	          << std::endl;
-}
-catch(const Interrupted &e)
-{
-	return;
-}
-catch(const std::exception &e)
-{
-	std::cerr << "\033[1;37;41mDispatch Unhandled:\033[0m"
-	          << " [\033[1;31m" << e.what() << "\033[0m]"
-	          << " Message: [\033[1;31m" << msg << "\033[0;0m]"
-	          << std::endl;
-}
 
 
-void Bot::handle_conn(const Msg &msg)
+void Bot::handle_welcome(const Msg &msg)
 {
-	log_handle(msg,"CONNECT");
+	log_handle(msg,"WELCOME");
 
 	Sess &sess = get_sess();
 	const Opts &opts = sess.get_opts();
@@ -211,13 +235,6 @@ void Bot::handle_conn(const Msg &msg)
 
 	Chans &chans = get_chans();
 	chans.autojoin();
-}
-
-
-void Bot::handle_welcome(const Msg &msg)
-{
-	log_handle(msg,"WELCOME");
-
 }
 
 
@@ -462,7 +479,7 @@ void Bot::handle_mode(const Msg &msg)
 
 	log_handle(msg,"MODE");
 
-	// Our UMODE coming as MODE from the irclib
+	// Our UMODE
 	if(msg.num_params() == 1)
 	{
 		handle_umode(msg);
@@ -759,7 +776,15 @@ void Bot::handle_chanmsg(const Msg &msg)
 
 void Bot::handle_privmsg(const Msg &msg)
 {
+	using namespace fmt::PRIVMSG;
+
 	log_handle(msg,"PRIVMSG");
+
+	if(msg[SELFNAME] != get_nick())
+	{
+		handle_chanmsg(msg);
+		return;
+	}
 
 	Users &users = get_users();
 	if(!users.has(msg.get_nick()))
@@ -819,7 +844,13 @@ void Bot::handle_notice(const Msg &msg)
 	log_handle(msg,"NOTICE");
 
 	if(msg.from_server())
+	{
+		Sess &sess = get_sess();
+		if(!sess.is_registered())
+			sess.reg();
+
 		return;
+	}
 
 	if(msg[SELFNAME] != get_nick())
 	{

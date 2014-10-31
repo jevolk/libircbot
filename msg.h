@@ -72,9 +72,12 @@ class Msg
 {
 	using Params = std::vector<std::string>;
 
-	uint32_t code;
-	std::string name;
+	static void consume_any(std::istream &stream, const char &c);
+	static void consume_until(std::istream &stream, const char &c);
+
 	Mask origin;
+	std::string name;
+	uint32_t code;
 	Params params;
 
   public:
@@ -102,9 +105,58 @@ class Msg
 	Msg(const uint32_t &code, const char *const &origin, const char **const &params, const size_t &count);
 	Msg(const std::string &name, const std::string &origin, const Params &params);
 	Msg(const char *const &name, const char *const &origin, const char **const &params, const size_t &count);
+	Msg(std::istream &stream);
 
 	friend std::ostream &operator<<(std::ostream &s, const Msg &m);
 };
+
+
+inline
+Msg::Msg(std::istream &stream):
+origin([&]() -> Mask
+{
+	if(stream.eof() || stream.get() != ':')
+		return {};
+
+	Mask ret;
+	std::getline(stream,ret,' ');
+	return ret;
+}()),
+name([&]
+{
+	std::string ret;
+	consume_any(stream,' ');
+	std::getline(stream,ret,' ');
+	return ret;
+}()),
+code(isnumeric(name)? lex_cast<decltype(code)>(name) : 0),
+params([&]() -> Params
+{
+	using delim = boost::char_separator<char>;
+
+	std::string str;
+	std::getline(stream,str,'\r');
+
+	static const delim d(" ");
+	const auto col = str.find(':');
+
+	if(col == std::string::npos)
+	{
+		const boost::tokenizer<delim> tk(str,d);
+		return {tk.begin(),tk.end()};
+	}
+
+	const std::string &par = str.substr(0,col);
+	const std::string &trail = str.substr(col+1);
+	const boost::tokenizer<delim> tk(par,d);
+	Params ret(tk.begin(),tk.end());
+	ret.emplace_back(trail);
+	return ret;
+}())
+{
+	consume_any(stream,'\r');
+	consume_until(stream,'\n');
+}
 
 
 inline
@@ -112,8 +164,8 @@ Msg::Msg(const char *const &name,
          const char *const &origin,
          const char **const &params,
          const size_t &count):
-Msg(name,
-    origin? origin : std::string(),
+Msg(origin? origin : std::string(),
+    name,
     {params,params+count})
 {
 
@@ -124,9 +176,9 @@ inline
 Msg::Msg(const std::string &name,
          const std::string &origin,
          const Params &params):
-code(0),
-name(name),
 origin(origin),
+name(name),
+code(0),
 params(params)
 {
 
@@ -150,8 +202,8 @@ inline
 Msg::Msg(const uint32_t &code,
          const std::string &origin,
          const Params &params):
-code(code),
 origin(origin),
+code(code),
 params(params)
 {
 
@@ -192,6 +244,23 @@ catch(const std::out_of_range &e)
 {
 	static const std::string empty;
 	return empty;
+}
+
+
+inline
+void Msg::consume_any(std::istream &stream,
+                      const char &c)
+{
+	while(!stream.eof() && stream.peek() == c)
+		stream.ignore(1,c);
+}
+
+
+inline
+void Msg::consume_until(std::istream &stream,
+                        const char &c)
+{
+	stream.ignore(512,c);
 }
 
 

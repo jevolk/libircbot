@@ -396,36 +396,3 @@ class unlock_guard
 	unlock_guard(const unlock_guard &) = delete;
 	~unlock_guard()                                { m.lock();    }
 };
-
-
-template<int CODE_FOR_SUCCESS = 0,
-         class Exception = Internal,
-         class Function,
-         class... Args>
-auto irc_call(irc_session_t *const &sess,
-              Function&& func,
-              Args&&... args)
--> decltype(func(sess,args...))
-{
-	const auto ret = func(sess,std::forward<Args>(args)...);
-
-	if(ret != CODE_FOR_SUCCESS)
-	{
-		const int errc = irc_errno(sess);
-		throw Exception(errc,"libircclient: (") << errc << ") " << irc_strerror(errc);
-	}
-
-	return ret;
-}
-
-
-template<int CODE_FOR_SUCCESS = 0,
-         class Function,
-         class... Args>
-bool irc_call(std::nothrow_t,
-              irc_session_t *const &sess,
-              Function&& func,
-              Args&&... args)
-{
-	return func(sess,std::forward<Args>(args)...) == CODE_FOR_SUCCESS;
-}

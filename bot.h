@@ -29,13 +29,13 @@
 #include <condition_variable>
 
 // boost
+#include <boost/asio.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 // ircclient
-#include <libircclient.h>
 #include <libirc_rfcnumeric.h>
 
 // leveldb
@@ -55,7 +55,6 @@ namespace colors
 {
 	#include "colors.h"
 }
-#include "callbacks.h"
 #include "exception.h"
 #include "util.h"
 #include "opts.h"
@@ -73,7 +72,7 @@ namespace colors
 #include "acct.h"
 #include "stream.h"
 #include "throttle.h"
-#include "sendq.h"
+#include "socket.h"
 #include "sess.h"
 #include "floodguard.h"
 #include "quote.h"
@@ -107,7 +106,7 @@ using Chan = chan::Chan;
  *		conn() - initiate the connection to server
  *		run() - runs the event processing
  *		
- * This class is protected by a simple mutex:
+ * This class is protected by a simple mutex via the lock()/unlock() concept:
  *	- Mutex is locked when handling events.
  *		+ The handlers you override operate under this lock.
  *	- If you access this class asynchronously outside of the handler stack you must lock.
@@ -131,8 +130,6 @@ class Bot : public std::mutex
 	auto &get_ns() const                              { return ns;                          }
 	auto &get_cs() const                              { return cs;                          }
 	auto &get_logs() const                            { return logs;                        }
-
-	bool ready() const                                { return get_sess().is_conn();        }
 	auto &get_nick() const                            { return get_sess().get_nick();       }
 
   protected:
@@ -240,15 +237,27 @@ class Bot : public std::mutex
 	void handle_isupport(const Msg &m);
 	void handle_yourhost(const Msg &m);
 	void handle_welcome(const Msg &m);
-	void handle_conn(const Msg &m);
+	void dispatch(const Msg &msg);
+
+  private:
+	void handle_pck(const boost::system::error_code &e, size_t size, std::shared_ptr<boost::asio::streambuf> sbuf);
+	void set_handle(std::shared_ptr<boost::asio::streambuf> buf);
+	void new_handle();
 
   public:
-	void dispatch(const Msg &msg);                    // Input event
-	void operator()();                                // Run worker loop
+	enum Loop
+	{
+		FOREGROUND,
+		BACKGROUND,
+	};
 
 	void join(const std::string &chan)                { get_chans().join(chan);             }
 	void quit();
-	void conn()                                       { get_sess().conn();                  }
+
+	void operator()(const Msg &msg)                   { dispatch(msg);                      }  // manual dispatch
+	void operator()(const Loop &loop);                // Run worker loop
+	void disconnect()                                 { get_sess().disconnect();            }
+	void connect()                                    { get_sess().connect();               }
 
 	Bot(void) = delete;
 	Bot(const Opts &opts);

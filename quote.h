@@ -9,7 +9,7 @@
 class Quote
 {
 	Sess &sess;
-	SendQ &sendq;
+	Socket &socket;
 	const char *const &cmd;
 
   public:
@@ -17,13 +17,13 @@ class Quote
 	static constexpr flush_t flush = Stream::flush;
 
 	auto &get_sess() const                          { return sess;               }
-	auto &get_sendq() const                         { return sendq;              }
+	auto &get_socket() const                        { return socket;             }
 	auto &get_cmd() const                           { return cmd;                }
 	bool has_cmd() const                            { return strnlen(cmd,64);    }
 
   protected:
 	auto &get_sess()                                { return sess;               }
-	auto &get_sendq()                               { return sendq;              }
+	auto &get_socket()                              { return socket;             }
 	auto &get_cmd()                                 { return cmd;                }
 
   public:
@@ -45,13 +45,13 @@ Quote::Quote(Sess &sess,
              const char *const &cmd,
              const milliseconds &delay):
 sess(sess),
-sendq(sess.get_sendq()),
+socket(sess.get_socket()),
 cmd(cmd)
 {
-	sendq.set_delay(delay);
+	socket.set_delay(delay);
 
 	if(has_cmd())
-		sendq << cmd << " ";
+		socket << cmd << " ";
 }
 
 
@@ -61,11 +61,11 @@ noexcept
 {
 	if(std::uncaught_exception())
 	{
-		sendq.clear();
+		socket.clear();
 		return;
 	}
 
-	if(sendq.has_pending())
+	if(socket.has_pending())
 		operator<<(flush);
 }
 
@@ -73,7 +73,7 @@ noexcept
 inline
 Quote &Quote::operator()()
 {
-	auto &sendq = get_sendq();
+	auto &socket = get_socket();
 	operator<<(flush);
 	return *this;
 }
@@ -82,7 +82,7 @@ Quote &Quote::operator()()
 inline
 Quote &Quote::operator()(const std::string &str)
 {
-	auto &sendq = get_sendq();
+	auto &socket = get_socket();
 	operator<<(str);
 	operator<<(flush);
 	return *this;
@@ -92,11 +92,11 @@ Quote &Quote::operator()(const std::string &str)
 template<class T>
 Quote &Quote::operator<<(const T &t)
 {
-	auto &sendq = get_sendq();
-	if(has_cmd() && !sendq.has_pending())
-		sendq << cmd << " ";
+	auto &socket = get_socket();
+	if(has_cmd() && !socket.has_pending())
+		socket << cmd << " ";
 
-	sendq << t;
+	socket << t;
 	return *this;
 }
 
@@ -104,7 +104,7 @@ Quote &Quote::operator<<(const T &t)
 inline
 Quote &Quote::operator<<(const flush_t)
 {
-	auto &sendq = get_sendq();
-	sendq << flush;
+	auto &socket = get_socket();
+	socket << flush;
 	return *this;
 }

@@ -8,7 +8,7 @@
 
 class FloodGuard
 {
-	SendQ &sendq;
+	Socket &socket;
 	const milliseconds saved;
 
   public:
@@ -21,15 +21,15 @@ class FloodGuard
 inline
 FloodGuard::FloodGuard(Sess &sess,
                        const milliseconds &inc):
-sendq(sess.get_sendq()),
-saved(sendq.get_throttle().get_inc())
+socket(sess.get_socket()),
+saved(socket.get_throttle().get_inc())
 {
-	sendq.set_throttle(inc);
+	socket.set_throttle(inc);
 }
 
 
 inline
 FloodGuard::~FloodGuard()
 {
-	sendq.set_throttle(saved);
+	socket.set_throttle(saved);
 }

@@ -8,9 +8,9 @@
 
 class Logs
 {
+	Sess &sess;
 	Chans &chans;
 	Users &users;
-	std::mutex &bot;
 
   public:
 	struct ClosureArgs
@@ -77,17 +77,17 @@ class Logs
 	bool atleast(const Chan &chan, const Filter &filter, const size_t &count) const;
 	bool exists(const Chan &chan, const Filter &filter) const;
 
-	Logs(Chans &chans, Users &users, std::mutex &bot);
+	Logs(Sess &sess, Chans &chans, Users &users);
 };
 
 
 inline
-Logs::Logs(Chans &chans,
-           Users &users,
-           std::mutex &bot):
+Logs::Logs(Sess &sess,
+           Chans &chans,
+           Users &users):
+sess(sess),
 chans(chans),
-users(users),
-bot(bot)
+users(users)
 {
 
 

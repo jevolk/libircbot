@@ -11,81 +11,41 @@
 using namespace irc::bot;
 
 
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// libircclient
-//
-
-decltype(coarse_flood_mutex) irc::bot::coarse_flood_mutex;
-decltype(coarse_flood_cond) irc::bot::coarse_flood_cond;
-
-
-void irc::bot::coarse_flood_wait()
+decltype(sendq::mutex)        sendq::mutex;
+decltype(sendq::cond)         sendq::cond;
+decltype(sendq::interrupted)  sendq::interrupted;
+decltype(sendq::queue)        sendq::queue;
+decltype(sendq::slowq)        sendq::slowq;
+decltype(sendq::thread)       sendq::thread {&sendq::worker};
+static const scope join([]
 {
-	std::unique_lock<std::mutex> lock(coarse_flood_mutex);
-	coarse_flood_cond.wait(lock);
-}
-
-
-void irc::bot::coarse_flood_done()
-{
-	coarse_flood_cond.notify_all();
-}
-
-
-static
-void send(irc_session_t *const &sess,
-          const std::string &pck)
-{
-	printf("%-24s (%p): %s\n",
-	       "\033[1;36mSEND\033[0m",
-	       (const void*)sess,
-	       pck.c_str());
-
-	while(1) try
-	{
-		irc_call(sess,irc_send_raw,"%s",pck.c_str());
-		return;
-	}
-	catch(const Internal &e)
-	{
-		switch(e.code())
-		{
-			case LIBIRC_ERR_NOMEM:   coarse_flood_wait();   continue;
-			default:                                        throw;
-		}
-	}
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// SendQ
-//
-
-decltype(SendQ::mutex) SendQ::mutex;
-decltype(SendQ::cond) SendQ::cond;
-decltype(SendQ::interrupted) SendQ::interrupted;
-decltype(SendQ::queue) SendQ::queue;
-decltype(SendQ::slowq) SendQ::slowq;
-
-static std::thread thread {&SendQ::worker};
-static scope join([]
-{
-	SendQ::interrupt();
-	thread.join();
+	sendq::interrupt();
+	sendq::thread.join();
 });
 
 
-void SendQ::interrupt()
+void sendq::interrupt()
 {
 	interrupted.store(true,std::memory_order_release);
 	cond.notify_all();
 }
 
 
-auto SendQ::slowq_next()
+size_t sendq::send(Ent &ent)
+{
+	static const boost::asio::const_buffer terminator{"\r\n",2};
+	const std::array<boost::asio::const_buffer,2> buf
+	{
+		boost::asio::const_buffer{ent.pck.data(),ent.pck.size()},
+		terminator
+	};
+
+	std::cout << std::setw(24) << "\033[1;36mSEND\033[0m" << ent.pck << std::endl;
+	return ent.sd->send(buf);
+}
+
+
+auto sendq::slowq_next()
 {
 	using namespace std::chrono;
 
@@ -102,21 +62,21 @@ auto SendQ::slowq_next()
 }
 
 
-void SendQ::slowq_process()
+void sendq::slowq_process()
 {
 	while(!slowq.empty())
 	{
-		const Ent &ent = slowq.front();
+		Ent &ent = slowq.front();
 		if(ent.absolute > steady_clock::now())
 			break;
 
-		send(ent.sess,ent.pck);
+		send(ent);
 		slowq.pop_front();
 	}
 }
 
 
-void SendQ::slowq_add(Ent &ent)
+void sendq::slowq_add(Ent &ent)
 {
 	slowq.emplace_back(ent);
 	std::sort(slowq.begin(),slowq.end(),[]
@@ -127,21 +87,21 @@ void SendQ::slowq_add(Ent &ent)
 }
 
 
-void SendQ::process(Ent &ent)
+void sendq::process(Ent &ent)
 {
 	if(ent.absolute > steady_clock::now())
 		slowq_add(ent);
 	else
-		send(ent.sess,ent.pck);
+		send(ent);
 }
 
 
-void SendQ::worker()
+void sendq::worker()
 try
 {
 	while(1)
 	{
-		std::unique_lock<decltype(SendQ::mutex)> lock(SendQ::mutex);
+		std::unique_lock<decltype(mutex)> lock(mutex);
 		cond.wait_for(lock,slowq_next());
 
 		if(interrupted.load(std::memory_order_consume))
