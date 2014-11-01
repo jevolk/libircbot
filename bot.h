@@ -67,6 +67,11 @@ namespace colors
 #include "flag.h"
 #include "akick.h"
 #include "msg.h"
+namespace handler
+{
+	#include "handler.h"
+	#include "handlers.h"
+}
 #include "adoc.h"
 #include "adb.h"
 #include "acct.h"
@@ -89,6 +94,7 @@ namespace chan
 	#include "chan.h"
 }
 using Chan = chan::Chan;
+#include "events.h"
 #include "users.h"
 #include "chans.h"
 #include "nickserv.h"
@@ -111,58 +117,23 @@ using Chan = chan::Chan;
  *		+ The handlers you override operate under this lock.
  *	- If you access this class asynchronously outside of the handler stack you must lock.
  */
-class Bot : public std::mutex
+struct Bot : public std::mutex
 {
-	Adb adb;
-	Sess sess;
-	Users users;
-	Chans chans;
-	NickServ ns;
-	ChanServ cs;
-	Logs logs;
-
-  public:
-	auto &get_adb() const                             { return adb;                         }
-	auto &get_sess() const                            { return sess;                        }
-	auto &get_opts() const                            { return sess.get_opts();             }
-	auto &get_users() const                           { return users;                       }
-	auto &get_chans() const                           { return chans;                       }
-	auto &get_ns() const                              { return ns;                          }
-	auto &get_cs() const                              { return cs;                          }
-	auto &get_logs() const                            { return logs;                        }
-	auto &get_nick() const                            { return get_sess().get_nick();       }
-
-  protected:
-	auto &get_adb()                                   { return adb;                         }
-	auto &get_sess()                                  { return sess;                        }
-	auto &get_users()                                 { return users;                       }
-	auto &get_chans()                                 { return chans;                       }
-	auto &get_ns()                                    { return ns;                          }
-	auto &get_cs()                                    { return cs;                          }
-	auto &get_logs()                                  { return logs;                        }
-
-	// [RECV] Main interface for users of this library
-	virtual void handle_nick(const Msg &m, User &u) {}
-	virtual void handle_privmsg(const Msg &m, User &u) {}
-	virtual void handle_notice(const Msg &m, User &u) {}
-	virtual void handle_action(const Msg &m, User &u) {}
-	virtual void handle_chanmsg(const Msg &m, Chan &c, User &u) {}
-	virtual void handle_caction(const Msg &m, Chan &c, User &u) {}
-	virtual void handle_cnotice(const Msg &m, Chan &c, User &u) {}
-	virtual void handle_kick(const Msg &m, Chan &c, User &u) {}
-	virtual void handle_part(const Msg &m, Chan &c, User &u) {}
-	virtual void handle_join(const Msg &m, Chan &c, User &u) {}
-	virtual void handle_mode(const Msg &m, Chan &c, User &u) {}
-	virtual void handle_mode(const Msg &m, Chan &c) {}
-
-	// [RECV] Special override interface
-	virtual void handle_caction_owner(const Msg &m, Chan &c, User &u);
+	Adb adb;                                          // Document database (local ldb)
+	Sess sess;                                        // IRC client session
+	const Opts &opts;                                 // Options for this session
+	Events events;                                    // Event handler registry
+	Users users;                                      // Users state
+	Chans chans;                                      // Channels state
+	NickServ ns;                                      // NickServ service parser
+	ChanServ cs;                                      // ChanServ service parser
+	Logs logs;                                        // Logs access / analyzer
 
   private:
 	void log_handle(const Msg &m, const std::string &name = "") const;
+	void handle_caction_owner(const Msg &m, Chan &c, User &u);
 	void handle_unhandled(const Msg &m);
 	void handle_error(const Msg &m);
-
 	void handle_modeislocked(const Msg &m);
 	void handle_cannotsendtochan(const Msg &m);
 	void handle_bannedfromchan(const Msg &m);
@@ -193,11 +164,11 @@ class Bot : public std::mutex
 	void handle_ctcp_act(const Msg &m);
 	void handle_ctcp_rep(const Msg &m);
 	void handle_ctcp_req(const Msg &m);
-	void handle_acceptnot(const Msg &msg);
-	void handle_acceptexist(const Msg &msg);
-	void handle_acceptfull(const Msg &msg);
-	void handle_endofaccept(const Msg &msg);
-	void handle_acceptlist(const Msg &msg);
+	void handle_acceptnot(const Msg &m);
+	void handle_acceptexist(const Msg &m);
+	void handle_acceptfull(const Msg &m);
+	void handle_endofaccept(const Msg &m);
+	void handle_acceptlist(const Msg &m);
 	void handle_monlistfull(const Msg &m);
 	void handle_endofmonlist(const Msg &m);
 	void handle_monoffline(const Msg &m);
@@ -238,27 +209,20 @@ class Bot : public std::mutex
 	void handle_yourhost(const Msg &m);
 	void handle_welcome(const Msg &m);
 	void handle_ping(const Msg &m);
-	void dispatch(const Msg &msg);
 
-  private:
 	void handle_pck(const boost::system::error_code &e, size_t size, std::shared_ptr<boost::asio::streambuf> sbuf);
 	void set_handle(std::shared_ptr<boost::asio::streambuf> buf);
 	void new_handle();
 
   public:
-	enum Loop
-	{
-		FOREGROUND,
-		BACKGROUND,
-	};
-
-	void join(const std::string &chan)                { get_chans().join(chan);             }
-	void quit();
-
-	void operator()(const Msg &msg)                   { dispatch(msg);                      }  // manual dispatch
+	enum Loop { FOREGROUND, BACKGROUND };
 	void operator()(const Loop &loop);                // Run worker loop
-	void disconnect()                                 { get_sess().disconnect();            }
-	void connect()                                    { get_sess().connect();               }
+	void operator()(const Msg &msg)                   { events.msg(msg);                   }  // manual dispatch
+
+	void quit();
+	void join(const std::string &chan)                { chans.join(chan);                  }
+	void disconnect()                                 { sess.disconnect();                 }
+	void connect()                                    { sess.connect();                    }
 
 	Bot(void) = delete;
 	Bot(const Opts &opts);
