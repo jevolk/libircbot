@@ -40,6 +40,20 @@ std::string string(const T &t)
 }
 
 
+template<class I,
+         class O>
+auto pointers(const I &begin,
+              const I &end,
+              O &&out)
+{
+	return std::transform(begin,end,out,[]
+	(auto &t)
+	{
+		return &t;
+	});
+}
+
+
 template<class R,
          class I>
 R pointers(I&& begin,
