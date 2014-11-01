@@ -59,7 +59,19 @@ prio(prio)
 template<class Prototype>
 template<class... Args>
 void Handler<Prototype>::operator()(Args&&... args)
-const
+const try
 {
 	func(std::forward<Args>(args)...);
+}
+catch(const Internal &e)
+{
+	std::cerr << "HANDLER INTERNAL: \033[1;45;37m" << e << "\033[0m" << std::endl;
+}
+catch(const Interrupted &)
+{
+	throw;
+}
+catch(const std::exception &e)
+{
+	std::cerr << "UNHANDLED: \033[1;41;37m" << e.what() << "\033[0m" << std::endl;
 }

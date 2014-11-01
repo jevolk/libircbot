@@ -49,24 +49,15 @@ void recvq::reset()
 
 
 void recvq::worker()
+try
 {
-	while(!interrupted.load(std::memory_order_consume)) try
+	while(!interrupted.load(std::memory_order_consume))
 	{
 		const scope r(std::bind(&recvq::reset));
 		ios.run();
 	}
-	catch(const Internal &e)
-	{
-		std::cerr << "INTERNAL: \033[1;41;37m" << e << "\033[0m" << std::endl;
-		continue;
-	}
-	catch(const Interrupted &e)
-	{
-		return;
-	}
-	catch(const std::exception &e)
-	{
-		std::cerr << "UNHANDLED: \033[1;45;37m" << e.what() << "\033[0m" << std::endl;
-		continue;
-	}
+}
+catch(const Interrupted &e)
+{
+	return;
 }
