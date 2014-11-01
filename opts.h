@@ -174,10 +174,7 @@ std::ostream &operator<<(std::ostream &s,
                          const Opts &id)
 {
 	for(const auto &pair : id)
-		s << std::setw(16) << std::left << pair.first
-		          << " => "
-		          << pair.second
-		          << std::endl;
+		s << std::setw(16) << std::left << pair.first << " => " << pair.second << std::endl;
 
 	s << std::endl;
 	s << "Autojoin channels: " << std::endl;

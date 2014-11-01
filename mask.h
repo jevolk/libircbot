@@ -8,10 +8,6 @@
 
 struct Mask : std::string
 {
-	static const size_t NICKNAME_MAX_LEN  = 16;
-	static const size_t USERNAME_MAX_LEN  = 16;
-	static const size_t HOSTNAME_MAX_LEN  = 127;
-
 	enum Form                             { INVALID, CANONICAL, EXTENDED                          };
 	enum Type                             { NICK, HOST, ACCT                                      };
 
