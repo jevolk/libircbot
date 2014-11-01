@@ -339,12 +339,6 @@ void Bot::handle_quit(const Msg &msg)
 
 	User &user = users.get(msg.get_nick());
 
-	const scope free([&]
-	{
-		if(user.num_chans() == 0)
-			users.del(user);
-	});
-
 	chans.for_each([&](Chan &chan)
 	{
 		chan.log(user,msg);
@@ -355,6 +349,9 @@ void Bot::handle_quit(const Msg &msg)
 	});
 
 	events.user(msg,user);
+
+	if(user.num_chans() == 0)
+		users.del(user);
 }
 
 
@@ -441,21 +438,17 @@ void Bot::handle_part(const Msg &msg)
 	User &user = users.get(msg.get_nick());
 	Chan &chan = chans.get(msg[CHANNAME]);
 
-	const scope free([&]
-	{
-		if(user.num_chans() == 0)
-			users.del(user);
-
-		// We have left
-		if(msg.get_nick() == sess.get_nick())
-			chans.del(chan);
-	});
-
 	chan.log(user,msg);
 	events.chan_user(msg,chan,user);
 
 	if(chan.users.del(user))
 		user.dec_chans();
+
+	if(user.num_chans() == 0)
+		users.del(user);
+
+	if(msg.get_nick() == sess.get_nick())
+		chans.del(chan);
 }
 
 
@@ -725,14 +718,11 @@ void Bot::handle_kick(const Msg &msg)
 	events.chan_user(msg,chan,user);
 	events.chan(msg,chan);
 
-	const scope free([&]
-	{
-		if(user.num_chans() == 0)
-			users.del(user);
-	});
-
 	if(chan.users.del(user))
 		user.dec_chans();
+
+	if(user.num_chans() == 0)
+		users.del(user);
 }
 
 

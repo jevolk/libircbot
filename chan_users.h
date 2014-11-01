@@ -31,7 +31,7 @@ class Users
 	auto &mode(const User &user)                            { return mode(user.get_nick());         }
 	bool rename(const User &user, const std::string &old);
 	bool add(User &user, const Mode &mode = {});
-	bool del(User &user);
+	bool del(User &user) noexcept;
 
 	friend std::ostream &operator<<(std::ostream &s, const Users &users);
 };
@@ -39,6 +39,7 @@ class Users
 
 inline
 bool Users::del(User &user)
+noexcept
 {
 	return users.erase(user.get_nick());
 }
