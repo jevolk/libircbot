@@ -6,11 +6,10 @@
  */
 
 
-template<class Arg>
 class OpDo
 {
 	Deltas deltas;
-	std::forward_list<std::function<void (Arg &)>> lambdas;
+	std::forward_list<std::function<void (Chan &)>> lambdas;
 
   public:
 	auto &get_deltas()    { return deltas;                                        }

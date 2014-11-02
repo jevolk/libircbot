@@ -88,7 +88,8 @@ namespace handler
 #include "log.h"
 namespace chan
 {
-	#include "opdo.h"
+	class Chan;
+	#include "chan_events.h"
 	#include "chan_lists.h"
 	#include "chan_users.h"
 	#include "chan.h"

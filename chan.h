@@ -33,7 +33,7 @@ class Chan : public Locutor,
 	std::string pass;                                       // passkey for channel
 	Topic _topic;                                           // Topic state
 	Info info;                                              // ChanServ info response
-	OpDo<Chan> opq;                                         // Queue of things to do when op'ed
+	OpDo opq;                                               // Queue of things to do when op'ed
 
   public:
 	Users users;                                            // Users container direct interface
