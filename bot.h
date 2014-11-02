@@ -107,7 +107,7 @@ using Chan = chan::Chan;
  *
  * Usage:
  *	0. #include this file, and only this file, in your project.
- *	1. Override the given virtual handle_* functions in the protected section.
+ *	1. Add event handlers to the appropriate events structure.
  *	2. Fill in an 'Opts' options structure (opts.h) and instance of this bot in your project.
  *	3. Operate the controls:
  *		conn() - initiate the connection to server
