@@ -59,6 +59,7 @@ namespace colors
 #include "util.h"
 #include "opts.h"
 #include "mask.h"
+#include "throttle.h"
 #include "isupport.h"
 #include "server.h"
 #include "delta.h"
@@ -66,17 +67,16 @@ namespace colors
 #include "ban.h"
 #include "flag.h"
 #include "akick.h"
+#include "adoc.h"
 #include "msg.h"
 namespace handler
 {
 	#include "handler.h"
 	#include "handlers.h"
 }
-#include "adoc.h"
 #include "adb.h"
 #include "acct.h"
 #include "stream.h"
-#include "throttle.h"
 #include "socket.h"
 #include "sess.h"
 #include "floodguard.h"
@@ -94,12 +94,12 @@ namespace chan
 	#include "chan.h"
 }
 using Chan = chan::Chan;
-#include "events.h"
 #include "users.h"
 #include "chans.h"
 #include "nickserv.h"
 #include "chanserv.h"
 #include "logs.h"
+#include "events.h"
 
 /**
  * Primary libircbot object
