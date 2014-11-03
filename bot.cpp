@@ -131,7 +131,6 @@ noexcept try
 {
 	Socket &sock = sess.get_socket();
 	sock.disconnect();
-
 }
 catch(const Internal &e)
 {
@@ -152,7 +151,16 @@ void Bot::connect()
 
 void Bot::quit()
 {
-	Quote(sess,"QUIT") << ":Alea iacta est";
+	const Opts &opts = sess.get_opts();
+	if(opts.get<bool>("quit"))
+	{
+		Quote(sess,"QUIT") << " :" << opts["quit-msg"];
+		return;
+	}
+
+	Socket &sock = sess.get_socket();
+	const bool hard = opts["quit"] == "hard";
+	sock.disconnect(!hard);
 }
 
 
@@ -204,11 +212,17 @@ void Bot::handle_conn(const boost::system::error_code &e)
 	if(e)
 		throw Internal(e.value(),e.message());
 
+	const std::lock_guard<Bot> lock(*this);
+	const FlushHold hold(sess);
+
 	if(opts.has("proxy-host"))
 		sess.proxy();
 
-	sess.cap();
-	sess.reg();
+	if(opts.get<bool>("caps"))
+		sess.cap();
+
+	if(opts.get<bool>("registration"))
+		sess.reg();
 }
 
 
@@ -247,7 +261,8 @@ void Bot::handle_welcome(const Msg &msg)
 
 	const Opts &opts = sess.get_opts();
 
-	Quote(sess,"MODE") << sess.get_nick() << " +w";
+	if(opts.has("umode"))
+		Quote(sess,"MODE") << sess.get_nick() << " " << opts["umode"];
 
 	if(!opts["ns-acct"].empty() && !opts["ns-pass"].empty())
 	{
@@ -437,12 +452,24 @@ void Bot::handle_join(const Msg &msg)
 		const Opts &opts = sess.get_opts();
 		const FloodGuard guard(sess,opts.get<uint>("throttle-join"));
 		chan.set_joined(true);
-		chan.mode();
-		chan.who();
-		chan.csinfo();
-		chan.banlist();
-		chan.quietlist();
-		chan.accesslist();
+
+		if(opts.get<bool>("chan-fetch-mode"))
+			chan.mode();
+
+		if(opts.get<bool>("chan-fetch-who"))
+			chan.who();
+
+		if(opts.get<bool>("chan-fetch-info") && opts.get<bool>("services"))
+			chan.csinfo();
+
+		if(opts.get<bool>("chan-fetch-lists"))
+		{
+			chan.banlist();
+			chan.quietlist();
+
+			if(opts.get<bool>("services"))
+				chan.accesslist();
+		}
 	}
 
 	chan.log(user,msg);

@@ -55,6 +55,7 @@ class Socket
 	std::ostringstream sendq;
 	milliseconds delay;
 	Throttle throttle;
+	int hold;                                         // makes operator<<(flush_t) ineffective
 
   public:
 	using flush_t = Stream::flush_t;
@@ -65,6 +66,7 @@ class Socket
 	auto &get_timer() const                           { return timer;                             }
 	auto &get_delay() const                           { return delay;                             }
 	auto &get_throttle() const                        { return throttle;                          }
+	auto has_hold() const                             { return hold > 0;                          }
 	auto has_pending() const                          { return !sendq.str().empty();              }
 	bool is_connected() const;
 
@@ -73,6 +75,8 @@ class Socket
 	auto &get_timer()                                 { return timer;                             }
 	void set_throttle(const milliseconds &inc)        { this->throttle.set_inc(inc);              }
 	void set_delay(const milliseconds &delay)         { this->delay = delay;                      }
+	void set_hold()                                   { this->hold++;                             }
+	void unset_hold()                                 { this->hold--;                             }
 	void clear();
 
 	Socket &operator<<(const flush_t);
@@ -110,7 +114,8 @@ ep([&]
 }()),
 sd(recvq::ios),
 timer(recvq::ios),
-delay(0ms)
+delay(0ms),
+hold(0)
 {
 
 }
@@ -171,6 +176,12 @@ Socket &Socket::operator<<(const T &t)
 inline
 Socket &Socket::operator<<(const flush_t)
 {
+	if(has_hold())
+	{
+		sendq << "\r\n";
+		return *this;
+	}
+
 	const scope clr(std::bind(&Socket::clear,this));
 	const auto xmit_time = delay == 0ms? throttle.next_abs():
 	                                     steady_clock::now() + delay;

@@ -44,11 +44,17 @@ path([&]
 		return name;
 
 	const auto &opts = sess->get_opts();
+	if(!opts.get<bool>("logging"))
+		return name;
+
 	const auto &dir = opts["logdir"];
 	mkdir(dir.c_str(),0777);
 	return dir + "/" + name;
 }())
 {
+	if(sess && !sess->get_opts().get<bool>("logging"))
+		return;
+
 	file.exceptions(std::ios_base::badbit|std::ios_base::failbit);
 	file.open(path,std::ios_base::app);
 }
@@ -64,6 +70,9 @@ void Log::operator()(const User &user,
                      const Msg &msg)
 try
 {
+	if(sess && !sess->get_opts().get<bool>("logging"))
+		return;
+
 	static const uint VERSION = 0;
 	static time_t time;
 	std::time(&time);

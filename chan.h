@@ -716,7 +716,9 @@ bool Chan::opdo(F&& f)
 inline
 void Chan::event_opped()
 {
-	if(opq.empty())
+	const Sess &sess = get_sess();
+	const Opts &opts = sess.get_opts();
+	if(opq.empty() && opts.get<bool>("chan-fetch-lists"))
 		fetch_oplists();
 
 	run_opdo();

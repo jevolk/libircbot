@@ -109,6 +109,7 @@ void Sess::proxy()
 	const auto &host = opts["host"];
 	const auto &port = opts["port"];
 
+	// socket.flush adds the second CR-LF
 	socket << "CONNECT " << host << ":" << port << " HTTP/1.0\r\n" << socket.flush;
 }
 

@@ -32,10 +32,20 @@ struct Opts : public std::map<std::string,std::string>
 		{"invite",              ""                                        },
 		{"invite-throttle",     "300"                                     },
 		{"owner",               ""                                        },
-		{"services",            "true"                                    },
 		{"throttle-msg",        "666"   /* milliseconds */                },
 		{"throttle-join",       "333"   /* milliseconds */                },
 		{"as-a-service",        "false"                                   },
+		{"logging",             "true"                                    },
+		{"caps",                "true"                                    },
+		{"registration",        "true"                                    },
+		{"services",            "true"                                    },
+		{"chan-fetch-mode",     "true"                                    },
+		{"chan-fetch-who",      "true"                                    },
+		{"chan-fetch-info",     "true"                                    },
+		{"chan-fetch-lists",    "true"                                    },
+		{"quit",                "true"                                    },
+		{"quit-msg",            "Alea iacta est"                          },
+		{"umode",               ""                                        },
 	}
 	{
 		if(at("locale").empty())

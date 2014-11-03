@@ -12,24 +12,38 @@ class FloodGuard
 	const milliseconds saved;
 
   public:
-	FloodGuard(Sess &sess, const milliseconds &inc);
-	FloodGuard(Sess &sess, const uint64_t &ms): FloodGuard(sess,milliseconds(ms)) {}
-	~FloodGuard();
+	FloodGuard(Sess &sess, const uint64_t &ms):
+	           FloodGuard(sess,milliseconds(ms)) {}
+
+	FloodGuard(Sess &sess, const milliseconds &inc):
+	           socket(sess.get_socket()), saved(socket.get_throttle().get_inc())
+	{
+		socket.set_throttle(inc);
+	}
+
+	~FloodGuard()
+	{
+		socket.set_throttle(saved);
+	}
 };
 
 
-inline
-FloodGuard::FloodGuard(Sess &sess,
-                       const milliseconds &inc):
-socket(sess.get_socket()),
-saved(socket.get_throttle().get_inc())
+class FlushHold
 {
-	socket.set_throttle(inc);
-}
+	Socket &socket;
 
+  public:
+	FlushHold(Sess &sess):
+	          socket(sess.get_socket())
+	{
+		socket.set_hold();
+	}
 
-inline
-FloodGuard::~FloodGuard()
-{
-	socket.set_throttle(saved);
-}
+	~FlushHold()
+	{
+		socket.unset_hold();
+
+		if(!socket.has_hold())
+			socket << socket.flush;
+	}
+};
