@@ -354,6 +354,10 @@ void Bot::handle_quit(const Msg &msg)
 
 	log_handle(msg,"QUIT");
 
+	// We have quit
+	if(msg.get_nick() == sess.get_nick())
+		return;
+
 	User &user = users.get(msg.get_nick());
 
 	chans.for_each([&](Chan &chan)
