@@ -52,6 +52,7 @@ class Sess
 	void umode(const std::string &m);
 	void umode();
 
+	void proxy();
 	void reg();
 	void cap();
 
@@ -99,6 +100,16 @@ void Sess::reg()
 	socket << "USER " << username << " unknown unknown :" << gecos << socket.flush;
 
 	set_registered(true);
+}
+
+
+inline
+void Sess::proxy()
+{
+	const auto &host = opts["host"];
+	const auto &port = opts["port"];
+
+	socket << "CONNECT " << host << ":" << port << " HTTP/1.0\r\n" << socket.flush;
 }
 
 

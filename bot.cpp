@@ -204,6 +204,9 @@ void Bot::handle_conn(const boost::system::error_code &e)
 	if(e)
 		throw Internal(e.value(),e.message());
 
+	if(opts.has("proxy-host"))
+		sess.proxy();
+
 	sess.cap();
 	sess.reg();
 }

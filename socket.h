@@ -94,8 +94,8 @@ ep([&]
 {
 	using namespace boost::asio::ip;
 
-	const auto &host = opts["host"];
-	const auto &port = opts["port"];
+	const auto &host = opts.has("proxy-host")? opts["proxy-host"] : opts["host"];
+	const auto &port = opts.has("proxy-port")? opts["proxy-port"] : opts["port"];
 
 	tcp::resolver res(recvq::ios);
 	tcp::resolver::query query(tcp::v4(),host,port,tcp::resolver::query::numeric_service);
