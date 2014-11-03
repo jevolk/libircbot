@@ -132,9 +132,11 @@ struct Bot : public std::mutex
 
   private:
 	void log_handle(const Msg &m, const std::string &name = "") const;
-	void handle_caction_owner(const Msg &m, Chan &c, User &u);
+
 	void handle_unhandled(const Msg &m);
-	void handle_error(const Msg &m);
+	void handle_caction_owner(const Msg &m, Chan &c, User &u);
+	void handle_ctcp_version(const Msg &m);
+	void handle_ctcp(const Msg &m);
 	void handle_modeislocked(const Msg &m);
 	void handle_cannotsendtochan(const Msg &m);
 	void handle_bannedfromchan(const Msg &m);
@@ -162,9 +164,6 @@ struct Bot : public std::mutex
 	void handle_kick(const Msg &m);
 	void handle_part(const Msg &m);
 	void handle_join(const Msg &m);
-	void handle_ctcp_act(const Msg &m);
-	void handle_ctcp_rep(const Msg &m);
-	void handle_ctcp_req(const Msg &m);
 	void handle_acceptnot(const Msg &m);
 	void handle_acceptexist(const Msg &m);
 	void handle_acceptfull(const Msg &m);
@@ -209,6 +208,7 @@ struct Bot : public std::mutex
 	void handle_isupport(const Msg &m);
 	void handle_yourhost(const Msg &m);
 	void handle_welcome(const Msg &m);
+	void handle_error(const Msg &m);
 	void handle_ping(const Msg &m);
 
 	void handle_pck(const boost::system::error_code &e, size_t size, std::shared_ptr<boost::asio::streambuf> sbuf);

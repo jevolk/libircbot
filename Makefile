@@ -8,7 +8,8 @@
 TARGET = libircbot.a
 
 CC = g++
-CCFLAGS += -std=c++14 -I../stldb
+VERSTR = $(shell git describe --tags)
+CCFLAGS += -std=c++14 -I../stldb -DIRCBOT_VERSION=\"$(VERSTR)\"
 WFLAGS = -pedantic                             \
          -Wall                                 \
          -Wextra                               \

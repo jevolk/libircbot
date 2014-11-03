@@ -59,9 +59,7 @@ logs(sess,chans,users)
 	EVENT( "ACTION", handle_action)
 	EVENT( "PRIVMSG", handle_privmsg)
 	EVENT( "AUTHENTICATE", handle_authenticate)
-	EVENT( "CTCP_ACTION", handle_ctcp_act)
-	EVENT( "CTCP_REP", handle_ctcp_rep)
-	EVENT( "CTCP_REQ", handle_ctcp_req)
+	EVENT( "CTCP", handle_ctcp)
 
 	EVENT( LIBIRC_RFC_RPL_WELCOME, handle_welcome)
 	EVENT( LIBIRC_RFC_RPL_YOURHOST, handle_yourhost)
@@ -918,21 +916,22 @@ void Bot::handle_invite(const Msg &msg)
 }
 
 
-void Bot::handle_ctcp_req(const Msg &msg)
+void Bot::handle_ctcp(const Msg &msg)
 {
-	log_handle(msg,"CTCP REQ");
+	log_handle(msg,"CTCP");
+
+	switch(hash(msg[0]))
+	{
+		case hash("VERSION"):    handle_ctcp_version(msg);       return;
+		default:                                                 return;
+	}
 }
 
 
-void Bot::handle_ctcp_rep(const Msg &msg)
+void Bot::handle_ctcp_version(const Msg &msg)
 {
-	log_handle(msg,"CTCP REP");
-}
-
-
-void Bot::handle_ctcp_act(const Msg &msg)
-{
-	log_handle(msg,"CTCP ACT");
+	User &user = users.get(msg.get_nick());
+	user << user.CTCP << "libircppbot" << IRCBOT_VERSION << user.flush;
 }
 
 

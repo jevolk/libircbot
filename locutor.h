@@ -14,6 +14,7 @@ class Locutor : public Stream
 		NOTICE,
 		PRIVMSG,
 		ACTION,
+		CTCP,
 	};
 
 	enum MethodEx
@@ -199,6 +200,7 @@ Locutor &Locutor::operator<<(const flush_t)
 		case NOTICE:     msg(methex == CMSG? "CNOTICE" : "NOTICE");      break;
 		case PRIVMSG:    msg(methex == CMSG? "CPRIVMSG" : "PRIVMSG");    break;
 		case ACTION:     msg("ACTION");                                  break;
+		case CTCP:       msg("CTCP");                                    break;
 		default:
 			throw Assertive("Unsupported locution method");
 	}
