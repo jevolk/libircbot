@@ -51,10 +51,9 @@ class Sess
 
 	void umode(const std::string &m);
 	void umode();
-	void reg();
 
-	void disconnect()                                  { socket.disconnect();                       }
-	void connect()                                     { socket.connect();                          }
+	void reg();
+	void cap();
 
 	Sess(std::mutex &mutex, const Opts &opts);
 	Sess(const Sess &) = delete;
@@ -78,6 +77,15 @@ identified(false)
 	// Raise an issue if you have a case for this being a problem.
 	irc::bot::locale = std::locale(opts["locale"].c_str());
 
+}
+
+
+inline
+void Sess::cap()
+{
+	socket << "CAP LS" << socket.flush;
+	socket << "CAP REQ :account-notify extended-join" << socket.flush;
+	socket << "CAP END" << socket.flush;
 }
 
 

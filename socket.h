@@ -79,6 +79,7 @@ class Socket
 	template<class T> Socket &operator<<(const T &t);
 
 	bool disconnect(const bool &fin = true);
+	template<class Handler> void connect(Handler&& handler);
 	void connect();
 
 	Socket(const Opts &opts);
@@ -125,6 +126,13 @@ try
 catch(const boost::system::system_error &e)
 {
 	throw Internal(e.what());
+}
+
+
+template<class Handler>
+void Socket::connect(Handler&& handler)
+{
+	sd.async_connect(ep,std::forward<Handler>(handler));
 }
 
 

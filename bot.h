@@ -212,6 +212,7 @@ struct Bot : public std::mutex
 	void handle_ping(const Msg &m);
 
 	void handle_pck(const boost::system::error_code &e, size_t size, std::shared_ptr<boost::asio::streambuf> sbuf);
+	void handle_conn(const boost::system::error_code &e);
 	void set_handle(std::shared_ptr<boost::asio::streambuf> buf);
 	void new_handle();
 
@@ -222,8 +223,8 @@ struct Bot : public std::mutex
 
 	void quit();
 	void join(const std::string &chan)                { chans.join(chan);                  }
-	void disconnect()                                 { sess.disconnect();                 }
-	void connect()                                    { sess.connect();                    }
+	void disconnect()                                 { sess.get_socket().disconnect();    }
+	void connect();
 
 	Bot(void) = delete;
 	Bot(const Opts &opts);

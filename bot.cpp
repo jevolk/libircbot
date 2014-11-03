@@ -118,7 +118,7 @@ logs(sess,chans,users)
 	#undef EVENT
 
 	if(opts.get<bool>("connect"))
-		sess.connect();
+		connect();
 }
 catch(const Internal &e)
 {
@@ -129,13 +129,24 @@ catch(const Internal &e)
 Bot::~Bot(void)
 noexcept try
 {
-	sess.disconnect();
+	Socket &sock = sess.get_socket();
+	sock.disconnect();
 
 }
 catch(const Internal &e)
 {
 	std::cerr << "Bot::~Bot(): " << e << std::endl;
 	return;
+}
+
+
+void Bot::connect()
+{
+	namespace ph = std::placeholders;
+
+	Socket &sock = sess.get_socket();
+	const auto &handler = std::bind(&Bot::handle_conn,this,ph::_1);
+	sock.connect(handler);
 }
 
 
@@ -188,6 +199,16 @@ void Bot::set_handle(std::shared_ptr<boost::asio::streambuf> buf)
 }
 
 
+void Bot::handle_conn(const boost::system::error_code &e)
+{
+	if(e)
+		throw Internal(e.value(),e.message());
+
+	sess.cap();
+	sess.reg();
+}
+
+
 void Bot::handle_pck(const boost::system::error_code &e,
                      size_t size,
                      std::shared_ptr<boost::asio::streambuf> buf)
@@ -222,11 +243,6 @@ void Bot::handle_welcome(const Msg &msg)
 	log_handle(msg,"WELCOME");
 
 	const Opts &opts = sess.get_opts();
-
-	Quote cap(sess,"CAP");
-	cap("LS");
-	cap("REQ :account-notify extended-join");
-	cap("END");
 
 	Quote(sess,"MODE") << sess.get_nick() << " +w";
 
@@ -799,12 +815,7 @@ void Bot::handle_notice(const Msg &msg)
 	log_handle(msg,"NOTICE");
 
 	if(msg.from_server())
-	{
-		if(!sess.is_registered())
-			sess.reg();
-
 		return;
-	}
 
 	if(msg[SELFNAME] != sess.get_nick())
 	{
