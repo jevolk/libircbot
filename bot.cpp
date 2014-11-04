@@ -774,8 +774,6 @@ void Bot::handle_chanmsg(const Msg &msg)
 {
 	using namespace fmt::CHANMSG;
 
-	log_handle(msg,"CHANMSG");
-
 	User &user = users.get(msg.get_nick());
 	Chan &chan = chans.get(msg[CHANNAME]);
 	chan.log(user,msg);
