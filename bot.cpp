@@ -170,13 +170,11 @@ try
 	switch(loop)
 	{
 		case FOREGROUND:               // TODO: reset
-			new_handle();
 			recvq::worker();
 			break;
 
 		case BACKGROUND:               // TODO: pool mgmt
 			recvq::add_thread();
-			new_handle();
 			break;
 	}
 }
@@ -223,6 +221,8 @@ void Bot::handle_conn(const boost::system::error_code &e)
 
 	if(opts.get<bool>("registration"))
 		sess.reg();
+
+	new_handle();
 }
 
 
@@ -236,11 +236,8 @@ void Bot::handle_pck(const boost::system::error_code &e,
 	std::istream istr(buf.get());
 	const Msg msg(istr);
 
-	{
-		const std::lock_guard<Bot> lock(*this);
-		events.msg(msg);
-	}
-
+	const std::lock_guard<Bot> lock(*this);
+	events.msg(msg);
 	set_handle(buf);
 }
 
