@@ -211,11 +211,10 @@ void Bot::handle_conn(const boost::system::error_code &e)
 		throw Internal(e.value(),e.message());
 
 	const std::lock_guard<Bot> lock(*this);
-	const FlushHold hold(sess);
-
 	if(opts.has("proxy-host"))
 		sess.proxy();
 
+	const FlushHold hold(sess);
 	if(opts.get<bool>("caps"))
 		sess.cap();
 
