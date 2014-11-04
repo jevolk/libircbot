@@ -32,6 +32,7 @@ void sendq::interrupt()
 
 
 size_t sendq::send(Ent &ent)
+try
 {
 	static const boost::asio::const_buffer terminator{"\r\n",2};
 	const std::array<boost::asio::const_buffer,2> buf
@@ -42,6 +43,11 @@ size_t sendq::send(Ent &ent)
 
 	std::cout << std::setw(24) << "\033[1;36mSEND\033[0m" << ent.pck << std::endl;
 	return ent.sd->send(buf);
+}
+catch(const boost::system::system_error &e)
+{
+	std::cerr << "sendq::send(): " << e.what() << std::endl;
+	return 0;
 }
 
 
