@@ -24,7 +24,6 @@ class Chan : public Locutor,
              public Acct
 {
 	Service *chanserv;
-	Log _log;
 
 	// State
 	bool joined;                                            // Indication the server has sent us
@@ -41,7 +40,6 @@ class Chan : public Locutor,
 
 	auto &get_name() const                                  { return Locutor::get_target();         }
 	auto &get_cs() const                                    { return *chanserv;                     }
-	auto &get_log() const                                   { return _log;                          }
 	auto &is_joined() const                                 { return joined;                        }
 	auto &get_mode() const                                  { return _mode;                         }
 	auto &get_creation() const                              { return creation;                      }
@@ -56,14 +54,12 @@ class Chan : public Locutor,
 
   protected:
 	auto &get_cs()                                          { return *chanserv;                     }
-	auto &get_log()                                         { return _log;                          }
 
 	void run_opdo();
 	void fetch_oplists();
 	void event_opped();                                     // We have been opped up
 
   public:
-	void log(const User &user, const Msg &msg)              { _log(user,msg);                       }
 	void set_joined(const bool &joined)                     { this->joined = joined;                }
 	void set_creation(const time_t &creation)               { this->creation = creation;            }
 	void set_info(const decltype(info) &info)               { this->info = info;                    }
@@ -142,7 +138,6 @@ Chan::Chan(Adb *const &adb,
 Locutor(sess,name),
 Acct(adb,&Locutor::get_target()),
 chanserv(chanserv),
-_log(sess,name),
 joined(false),
 creation(0),
 pass(pass)
@@ -796,7 +791,6 @@ std::ostream &operator<<(std::ostream &s,
 {
 	s << "name:       \t" << c.get_name() << std::endl;
 	s << "passkey:    \t" << c.get_pass() << std::endl;
-	s << "logfile:    \t" << c.get_log().get_path() << std::endl;
 	s << "mode:       \t" << c.get_mode() << std::endl;
 	s << "creation:   \t" << c.get_creation() << std::endl;
 	s << "joined:     \t" << std::boolalpha << c.is_joined() << std::endl;

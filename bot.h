@@ -85,7 +85,6 @@ namespace handler
 #include "locutor.h"
 #include "service.h"
 #include "user.h"
-#include "log.h"
 namespace chan
 {
 	class Chan;
@@ -99,7 +98,6 @@ using Chan = chan::Chan;
 #include "chans.h"
 #include "nickserv.h"
 #include "chanserv.h"
-#include "logs.h"
 #include "events.h"
 
 /**
@@ -128,7 +126,6 @@ struct Bot : public std::mutex
 	Chans chans;                                      // Channels state
 	NickServ ns;                                      // NickServ service parser
 	ChanServ cs;                                      // ChanServ service parser
-	Logs logs;                                        // Logs access / analyzer
 
   private:
 	void log_handle(const Msg &m, const std::string &name = "") const;

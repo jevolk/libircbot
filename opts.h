@@ -27,7 +27,6 @@ struct Opts : public std::map<std::string,std::string>
 		// Misc configuration
 		{"locale",              ""                                        },
 		{"dbdir",               "db"                                      },
-		{"logdir",              "logs"                                    },
 		{"prefix",              "!"                                       },
 		{"invite-throttle",     "300"                                     },
 		{"owner",               ""                                        },
@@ -40,7 +39,6 @@ struct Opts : public std::map<std::string,std::string>
 
 		{"invite",              "false"                                   },
 		{"database",            "false"                                   },
-		{"logging",             "false"                                   },
 		{"caps",                "true"                                    },
 		{"registration",        "true"                                    },
 		{"services",            "true"                                    },

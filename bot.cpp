@@ -31,8 +31,7 @@ opts(sess.get_opts()),
 users(adb,sess),
 chans(adb,sess),
 ns(adb,sess,users,chans),
-cs(adb,sess,chans),
-logs(sess,chans,users)
+cs(adb,sess,chans)
 {
 	namespace ph = std::placeholders;
 
@@ -436,10 +435,8 @@ void Bot::handle_quit(const Msg &msg)
 		return;
 
 	User &user = users.get(msg.get_nick());
-
 	chans.for_each([&](Chan &chan)
 	{
-		chan.log(user,msg);
 		events.chan_user(msg,chan,user);
 
 		if(chan.users.del(user))
@@ -503,7 +500,6 @@ void Bot::handle_join(const Msg &msg)
 
 	const auto &acct = sess.has_cap("extended-join")? msg[ACCTNAME] : std::string();
 	User &user = users.add(msg.get_nick(),msg.get_host(),acct);
-
 	Chan &chan = chans.add(msg[CHANNAME]);
 	if(chan.users.add(user))
 		user.inc_chans();
@@ -534,7 +530,6 @@ void Bot::handle_join(const Msg &msg)
 		}
 	}
 
-	chan.log(user,msg);
 	events.chan_user(msg,chan,user);
 }
 
@@ -547,8 +542,6 @@ void Bot::handle_part(const Msg &msg)
 
 	User &user = users.get(msg.get_nick());
 	Chan &chan = chans.get(msg[CHANNAME]);
-
-	chan.log(user,msg);
 	events.chan_user(msg,chan,user);
 
 	if(chan.users.del(user))
@@ -824,7 +817,6 @@ void Bot::handle_kick(const Msg &msg)
 	User &user = users.get(kickee);
 	Chan &chan = chans.get(msg[CHANNAME]);
 
-	chan.log(user,msg);
 	events.chan_user(msg,chan,user);
 	events.chan(msg,chan);
 
@@ -842,7 +834,6 @@ void Bot::handle_chanmsg(const Msg &msg)
 
 	User &user = users.get(msg.get_nick());
 	Chan &chan = chans.get(msg[CHANNAME]);
-	chan.log(user,msg);
 	events.chan_user(msg,chan,user);
 }
 
@@ -897,7 +888,6 @@ void Bot::handle_cnotice(const Msg &msg)
 	}
 
 	User &user = users.get(msg.get_nick());
-	chan.log(user,msg);
 	events.chan_user(msg,chan,user);
 }
 
@@ -945,7 +935,6 @@ void Bot::handle_caction(const Msg &msg)
 
 	User &user = users.get(msg.get_nick());
 	Chan &chan = chans.get(msg[CHANNAME]);
-	chan.log(user,msg);
 	events.chan_user(msg,chan,user);
 
 	//TODO: Move down
