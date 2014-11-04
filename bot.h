@@ -213,18 +213,24 @@ struct Bot : public std::mutex
 
 	void handle_pck(const boost::system::error_code &e, size_t size, std::shared_ptr<boost::asio::streambuf> sbuf);
 	void handle_conn(const boost::system::error_code &e);
+	void handle_timeout(const boost::system::error_code &e);
+
 	void set_handle(std::shared_ptr<boost::asio::streambuf> buf);
 	void new_handle();
 
   public:
+	bool cancel_timer();                              // cancel one timer
+	void set_timer(const milliseconds &ms);           // set a timer for anything
+	void set_timeout();                               // set_timer(opts["timeout"])
+
 	enum Loop { FOREGROUND, BACKGROUND };
 	void operator()(const Loop &loop);                // Run worker loop
 	void operator()(const Msg &msg)                   { events.msg(msg);                   }  // manual dispatch
 
 	void quit();
 	void join(const std::string &chan)                { chans.join(chan);                  }
+	void connect(const milliseconds &to = 0ms);       // default no timeout
 	void disconnect()                                 { sess.get_socket().disconnect();    }
-	void connect();
 
 	Bot(void) = delete;
 	Bot(const Opts &opts);

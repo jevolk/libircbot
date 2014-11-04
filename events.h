@@ -20,4 +20,8 @@ struct Events
 	Handlers<Handler<Chan>> chan;
 	Handlers<Handler<User>> user;
 	Handlers<Handler<Msg>> msg;
+
+	std::function<void ()> disconnected;
+	std::function<void ()> connected;
+	std::function<void ()> timeout;
 };

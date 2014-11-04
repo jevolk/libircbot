@@ -142,13 +142,17 @@ catch(const Internal &e)
 }
 
 
-void Bot::connect()
+void Bot::connect(const milliseconds &to)
 {
 	namespace ph = std::placeholders;
 
-	Socket &sock = sess.get_socket();
-	const auto &handler = std::bind(&Bot::handle_conn,this,ph::_1);
-	sock.connect(handler);
+	auto &sock = sess.get_socket();
+	auto &sd = sock.get_sd();
+	auto &ep = sock.get_ep();
+	sd.async_connect(ep,std::bind(&Bot::handle_conn,this,ph::_1));
+
+	if(to > 0ms)
+		set_timer(to);
 }
 
 
@@ -202,18 +206,69 @@ void Bot::set_handle(std::shared_ptr<boost::asio::streambuf> buf)
 {
 	namespace ph = std::placeholders;
 
+	set_timeout();
 	Socket &sock = sess.get_socket();
 	const auto hf = std::bind(&Bot::handle_pck,this,ph::_1,ph::_2,buf);
 	boost::asio::async_read_until(sock.get_sd(),*buf,"\r\n",hf);
 }
 
 
-void Bot::handle_conn(const boost::system::error_code &e)
+void Bot::set_timeout()
 {
-	if(e)
-		throw Internal(e.value(),e.message());
+	const auto timeout = opts.get<int64_t>("timeout");
+	set_timer(milliseconds(timeout));
+}
+
+
+void Bot::set_timer(const milliseconds &ms)
+{
+	namespace ph = std::placeholders;
+
+	if(ms < 0ms)
+		return;
+
+	Socket &sock = sess.get_socket();
+	auto &timer = sock.get_timer();
+	timer.expires_from_now(ms);
+	timer.async_wait(std::bind(&Bot::handle_timeout,this,ph::_1));
+}
+
+
+bool Bot::cancel_timer()
+{
+	boost::system::error_code ec;
+	Socket &sock = sess.get_socket();
+	sock.get_timer().cancel_one(ec);
+	return !ec;
+}
+
+
+void Bot::handle_timeout(const boost::system::error_code &e)
+{
+	if(e == boost::asio::error::operation_aborted)
+		return;
 
 	const std::lock_guard<Bot> lock(*this);
+	if(events.timeout)
+		events.timeout();
+
+	Socket &sock = sess.get_socket();
+	boost::system::error_code ec;
+	sock.get_sd().cancel(ec);
+}
+
+
+void Bot::handle_conn(const boost::system::error_code &e)
+{
+	cancel_timer();
+
+	if(e)
+		throw Interrupted(e.value(),e.message());
+
+	const std::lock_guard<Bot> lock(*this);
+	if(events.connected)
+		events.connected();
+
 	if(opts.has("proxy-host"))
 		sess.proxy();
 
@@ -232,8 +287,16 @@ void Bot::handle_pck(const boost::system::error_code &e,
                      size_t size,
                      std::shared_ptr<boost::asio::streambuf> buf)
 {
+	cancel_timer();
+
 	if(e)
+	{
+		const std::lock_guard<Bot> lock(*this);
+		if(events.disconnected)
+			events.disconnected();
+
 		throw Interrupted(e.value(),e.message());
+	}
 
 	std::istream istr(buf.get());
 	const Msg msg(istr);

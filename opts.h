@@ -36,6 +36,7 @@ struct Opts : public std::map<std::string,std::string>
 		{"as-a-service",        "false"                                   },
 		{"quit-msg",            "Alea iacta est"                          },
 		{"umode",               ""                                        },
+		{"timeout",             "20000" /* milliseconds */                },
 
 		{"invite",              "false"                                   },
 		{"database",            "false"                                   },
