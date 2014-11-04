@@ -29,13 +29,17 @@ struct Opts : public std::map<std::string,std::string>
 		{"dbdir",               "db"                                      },
 		{"logdir",              "logs"                                    },
 		{"prefix",              "!"                                       },
-		{"invite",              ""                                        },
 		{"invite-throttle",     "300"                                     },
 		{"owner",               ""                                        },
 		{"throttle-msg",        "666"   /* milliseconds */                },
 		{"throttle-join",       "333"   /* milliseconds */                },
 		{"as-a-service",        "false"                                   },
-		{"logging",             "true"                                    },
+		{"quit-msg",            "Alea iacta est"                          },
+		{"umode",               ""                                        },
+
+		{"invite",              "false"                                   },
+		{"database",            "false"                                   },
+		{"logging",             "false"                                   },
 		{"caps",                "true"                                    },
 		{"registration",        "true"                                    },
 		{"services",            "true"                                    },
@@ -44,8 +48,6 @@ struct Opts : public std::map<std::string,std::string>
 		{"chan-fetch-info",     "true"                                    },
 		{"chan-fetch-lists",    "true"                                    },
 		{"quit",                "true"                                    },
-		{"quit-msg",            "Alea iacta est"                          },
-		{"umode",               ""                                        },
 	}
 	{
 		if(at("locale").empty())

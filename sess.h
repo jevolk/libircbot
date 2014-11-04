@@ -48,6 +48,7 @@ class Sess
 
 	Socket &get_socket()                               { return socket;                             }
 	auto &get_mutex()                                  { return mutex;                              }
+	auto &get_opts()                                   { return opts;                               }
 
 	void umode(const std::string &m);
 	void umode();

@@ -122,7 +122,7 @@ struct Bot : public std::mutex
 {
 	Adb adb;                                          // Document database (local ldb)
 	Sess sess;                                        // IRC client session
-	const Opts &opts;                                 // Options for this session
+	Opts &opts;                                       // Options for this session
 	Events events;                                    // Event handler registry
 	Users users;                                      // Users state
 	Chans chans;                                      // Channels state

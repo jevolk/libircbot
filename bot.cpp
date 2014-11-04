@@ -20,6 +20,9 @@ Bot::Bot(const Opts &opts)
 try:
 adb([&]
 {
+	if(!opts.get<bool>("database"))
+		return std::string();
+
 	mkdir(opts["dbdir"].c_str(),0777);
 	return opts["dbdir"] + "/ircbot";
 }()),
@@ -1129,7 +1132,7 @@ void Bot::handle_whospecial(const Msg &msg)
 			user.set_acct(acct);
 			//user.set_idle(idle);
 
-			if(user.is_logged_in() && !user.Acct::exists())
+			if(user.is_logged_in() && opts.get<bool>("database") && !user.Acct::exists())
 				user.set_val("first_seen",time(NULL));
 
 			events.user(msg,user);
