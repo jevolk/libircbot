@@ -68,20 +68,6 @@ auto sendq::slowq_next()
 }
 
 
-void sendq::slowq_process()
-{
-	while(!slowq.empty())
-	{
-		Ent &ent = slowq.front();
-		if(ent.absolute > steady_clock::now())
-			break;
-
-		send(ent);
-		slowq.pop_front();
-	}
-}
-
-
 void sendq::slowq_add(Ent &ent)
 {
 	slowq.emplace_back(ent);
@@ -119,7 +105,15 @@ try
 			process(queue.front());
 		}
 
-		slowq_process();
+		while(!slowq.empty())
+		{
+			Ent &ent = slowq.front();
+			if(ent.absolute > steady_clock::now())
+				break;
+
+			send(ent);
+			slowq.pop_front();
+		}
     }
 }
 catch(const Internal &e)

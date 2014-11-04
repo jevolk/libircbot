@@ -24,7 +24,6 @@ namespace sendq
 	extern void interrupt();
 	extern size_t send(Ent &ent);
 	extern auto slowq_next();
-	extern void slowq_process();
 	extern void slowq_add(Ent &ent);
 	extern void process(Ent &ent);
 	extern void worker();
