@@ -8,7 +8,7 @@
 
 enum Special
 {
-	ANY,
+	ALL,
 	MISSING,
 };
 
@@ -117,7 +117,7 @@ auto &Handlers<Handler>::add(const Special &spec,
 {
 	switch(spec)
 	{
-		case ANY:
+		case ALL:
 			any.emplace_back(Handler{std::forward<Args>(args)...});
 			return any.back();
 
