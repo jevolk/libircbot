@@ -140,7 +140,7 @@ inline
 bool Socket::disconnect(const bool &fin)
 try
 {
-	if(sd.is_open())
+	if(!sd.is_open())
 		return false;
 
 	if(fin)
