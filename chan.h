@@ -17,7 +17,7 @@ using Info = std::map<std::string, std::string>;
 using Topic = std::tuple<std::string, Mask, time_t>;
 
 Type type(const char &c);
-char name_hat(const Server &serv, const std::string &nick); // "@nickname" then output = '@' (or null)
+std::string nick_prefix(const Server &serv, const std::string &nick);
 
 
 class Chan : public Locutor,
@@ -830,14 +830,15 @@ Type type(const char &c)
 
 
 inline
-char name_hat(const Server &serv,
-              const std::string &nick)
-try
+std::string nick_prefix(const Server &serv,
+                        const std::string &nick)
 {
-	const char &c = nick.at(0);
-	return serv.has_prefix(c)? c : '\0';
-}
-catch(const std::out_of_range &e)
-{
-	return '\0';
+	std::string ret;
+	for(const char &c : nick)
+		if(serv.has_prefix(c))
+			ret.push_back(c);
+		else
+			break;
+
+	return ret;
 }

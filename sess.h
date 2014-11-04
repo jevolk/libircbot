@@ -85,7 +85,7 @@ inline
 void Sess::cap()
 {
 	socket << "CAP LS" << socket.flush;
-	socket << "CAP REQ :account-notify extended-join" << socket.flush;
+	socket << "CAP REQ :account-notify extended-join multi-prefix" << socket.flush;
 	socket << "CAP END" << socket.flush;
 }
 
