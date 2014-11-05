@@ -148,10 +148,11 @@ void Bot::connect(const milliseconds &to)
 	auto &sock = sess.get_socket();
 	auto &sd = sock.get_sd();
 	auto &ep = sock.get_ep();
-	sd.async_connect(ep,std::bind(&Bot::handle_conn,this,ph::_1));
 
 	if(to > 0ms)
 		set_timer(to);
+
+	sd.async_connect(ep,std::bind(&Bot::handle_conn,this,ph::_1));
 }
 
 
@@ -205,7 +206,6 @@ void Bot::set_handle(std::shared_ptr<boost::asio::streambuf> buf)
 {
 	namespace ph = std::placeholders;
 
-	set_timeout();
 	Socket &sock = sess.get_socket();
 	const auto hf = std::bind(&Bot::handle_pck,this,ph::_1,ph::_2,buf);
 	boost::asio::async_read_until(sock.get_sd(),*buf,"\r\n",hf);
@@ -262,7 +262,7 @@ void Bot::handle_conn(const boost::system::error_code &e)
 	cancel_timer();
 
 	if(e)
-		throw Interrupted(e.value(),e.message());
+		throw Internal(e.value(),e.message());
 
 	const std::lock_guard<Bot> lock(*this);
 	if(events.connected)
@@ -286,8 +286,6 @@ void Bot::handle_pck(const boost::system::error_code &e,
                      size_t size,
                      std::shared_ptr<boost::asio::streambuf> buf)
 {
-	cancel_timer();
-
 	if(e)
 	{
 		const std::lock_guard<Bot> lock(*this);
