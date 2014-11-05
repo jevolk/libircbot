@@ -1378,9 +1378,6 @@ void Bot::handle_knock(const Msg &msg)
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	events.chan(msg,chan);
-
-	//TODO: Move down
-	chan << "It seems " << msg[MASK] << " " << msg[REASON] << "." << Chan::flush;
 }
 
 
