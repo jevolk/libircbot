@@ -1403,11 +1403,6 @@ void Bot::handle_modeislocked(const Msg &msg)
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	events.chan(msg,chan);
-
-	//TODO: Move down
-	chan << "I'm sorry " << msg[CHANNAME] << ", I'm afraid I can't do that. '"
-	     << msg[MODEUSED] << "' " << msg[REASON] << "."
-	     << chan.flush;
 }
 
 
