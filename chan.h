@@ -328,7 +328,7 @@ void Chan::invite(const std::string &nick)
 
 	const auto func = [nick](Chan &chan)
 	{
-		Quote(chan.get_sess(),"INVITE") << chan.get_name() << " " << nick;
+		Quote(chan.get_sess(),"INVITE") << nick << " " << chan.get_name();
 	};
 
 	if(has_mode('g'))
