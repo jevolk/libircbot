@@ -1100,9 +1100,6 @@ void Bot::handle_useronchannel(const Msg &msg)
 	Chan &chan = chans.get(msg[CHANNAME]);
 	User &user = users.get(msg[NICKNAME]);
 	events.chan_user(msg,chan,user);
-
-	//TODO: move down
-	chan << "It seems " << msg[NICKNAME] << " " << msg[REASON] << "." << Chan::flush;
 }
 
 
