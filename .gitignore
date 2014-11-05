@@ -1,0 +1,5 @@
+*.o
+*.a
+db
+core
+vgcore*
