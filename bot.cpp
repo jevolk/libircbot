@@ -671,9 +671,6 @@ void Bot::handle_chanoprivsneeded(const Msg &msg)
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	events.chan(msg,chan);
-
-	//TODO: move to event
-	chan << "I'm afraid I can't do that. (" << msg[REASON] << ")" << Chan::flush;
 }
 
 
