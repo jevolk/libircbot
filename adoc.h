@@ -14,6 +14,9 @@ struct Adoc : public boost::property_tree::ptree
 	bool has_child(const std::string &key) const         { return count(key) > 0;                   }
 	auto operator[](const std::string &key) const        { return get(key,std::string());           }
 
+	void recurse(const std::function<void (const std::string &, const Adoc &)> &func) const;
+	void for_each(const std::function<void (const std::string &, const std::string &)> &func) const;
+
 	// Array document utils
 	template<class C> C into() const;
 	template<class C> C into(const C &) const            { return into<C>();                        }
@@ -160,6 +163,38 @@ const
 	});
 
 	return ret;
+}
+
+
+inline
+void Adoc::for_each(const std::function<void (const std::string &key, const std::string &val)> &func)
+const
+{
+	recurse([&]
+	(const std::string &key, const Adoc &doc)
+	{
+		func(key,doc[key]);
+	});
+}
+
+
+inline
+void Adoc::recurse(const std::function<void (const std::string &key, const Adoc &doc)> &func)
+const
+{
+	const std::function<void (const Adoc &)> re = [&re,&func]
+	(const Adoc &doc)
+	{
+		for(const auto &pair : doc)
+		{
+			const auto &key = pair.first;
+			const auto &sub = pair.second;
+			func(key,doc);
+			re(sub);
+		}
+	};
+
+	re(*this);
 }
 
 
