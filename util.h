@@ -153,6 +153,28 @@ std::string between(const std::string &str,
 
 
 inline
+bool endswith(const std::string &str,
+              const std::string &val)
+{
+	const auto pos = str.find(val);
+	return pos != std::string::npos && pos == str.size() - val.size();
+}
+
+
+template<class It>
+bool endswith_any(const std::string &str,
+                  const It &begin,
+                  const It &end)
+{
+	return std::any_of(begin,end,[&]
+	(const auto &val)
+	{
+		return endswith(str,val);
+	});
+}
+
+
+inline
 void tokens(const std::string &str,
             const char *const &sep,
             const std::function<void (const std::string &)> &func)
