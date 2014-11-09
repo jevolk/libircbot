@@ -845,6 +845,13 @@ void Bot::handle_privmsg(const Msg &msg)
 		return;
 	}
 
+	if(msg[TEXT].size() >= 2 && msg[TEXT].front() == 0x01 && msg[TEXT].back() == 0x01)
+	{
+		const Msg m("CTCP",msg.get_origin(),{between(msg[TEXT],"\0x01")});
+		events.msg(m);
+		return;
+	}
+
 	if(!users.has(msg.get_nick()))
 	{
 		// User is not in any channel with us.
@@ -852,6 +859,9 @@ void Bot::handle_privmsg(const Msg &msg)
 		events.user(msg,user);
 		return;
 	}
+
+	User &user = users.get(msg.get_nick());
+	events.user(msg,user);
 }
 
 
@@ -921,6 +931,9 @@ void Bot::handle_notice(const Msg &msg)
 		events.user(msg,user);
 		return;
 	}
+
+	User &user = users.get(msg.get_nick());
+	events.user(msg,user);
 }
 
 
@@ -957,6 +970,9 @@ void Bot::handle_action(const Msg &msg)
 		events.user(msg,user);
 		return;
 	}
+
+	User &user = users.get(msg.get_nick());
+	events.user(msg,user);
 }
 
 
@@ -1009,18 +1025,16 @@ void Bot::handle_ctcp(const Msg &msg)
 {
 	log_handle(msg,"CTCP");
 
-	switch(hash(msg[0]))
+	if(!users.has(msg.get_nick()))
 	{
-		case hash("VERSION"):    handle_ctcp_version(msg);       return;
-		default:                                                 return;
+		// User is not in any channel with us.
+		User user(adb,sess,ns,msg.get_nick(),msg.get_host());
+		events.user(msg,user);
+		return;
 	}
-}
 
-
-void Bot::handle_ctcp_version(const Msg &msg)
-{
 	User &user = users.get(msg.get_nick());
-	user << user.CTCP << "libircppbot" << IRCBOT_VERSION << user.flush;
+	events.user(msg,user);
 }
 
 
