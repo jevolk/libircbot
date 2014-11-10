@@ -21,12 +21,12 @@ namespace sendq
 	extern std::deque<Ent> slowq;
 	extern std::thread thread;
 
-	extern void interrupt();
-	extern size_t send(Ent &ent);
-	extern auto slowq_next();
-	extern void slowq_add(Ent &ent);
-	extern void process(Ent &ent);
-	extern void worker();
+	void interrupt();
+	size_t send(Ent &ent);
+	auto slowq_next();
+	void slowq_add(Ent &ent);
+	void process(Ent &ent);
+	void worker();
 }
 
 
@@ -37,17 +37,18 @@ namespace recvq
 	extern boost::asio::io_service ios;
 	extern std::vector<std::thread *> thread;
 
-	extern void reset();
-	extern void add_thread();
-	extern void interrupt();
-	extern void worker();
+	void reset();
+	size_t num_threads();
+	void add_thread(const size_t &num = 1);
+	void min_threads(const size_t &num = 0);
+	void interrupt();
+	void worker();
 }
 
 
 class Socket
 {
 	const Opts &opts;
-	boost::asio::io_service::work work;
 	boost::asio::ip::tcp::endpoint ep;
 	boost::asio::ip::tcp::socket sd;
 	boost::asio::basic_waitable_timer<steady_clock> timer;
@@ -91,7 +92,6 @@ class Socket
 inline
 Socket::Socket(const Opts &opts):
 opts(opts),
-work(recvq::ios),
 ep([&]
 {
 	using namespace boost::asio::ip;

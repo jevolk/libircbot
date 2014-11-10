@@ -36,6 +36,7 @@ struct Opts : public std::map<std::string,std::string>
 		{"quit-msg",            "Alea iacta est"                          },
 		{"umode",               ""                                        },
 		{"timeout",             "20000" /* milliseconds */                },
+		{"threads",             "1"     /* for BACKGROUND mode */         },
 
 		{"invite",              "false"                                   },
 		{"database",            "false"                                   },

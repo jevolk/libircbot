@@ -176,12 +176,12 @@ try
 {
 	switch(loop)
 	{
-		case FOREGROUND:               // TODO: reset
+		case FOREGROUND:
 			recvq::worker();
 			break;
 
-		case BACKGROUND:               // TODO: pool mgmt
-			recvq::add_thread();
+		case BACKGROUND:
+			recvq::min_threads(opts.get<size_t>("threads"));
 			break;
 	}
 }
