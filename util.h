@@ -411,6 +411,20 @@ std::string randstr(const size_t &len)
 }
 
 
+inline
+std::string randword(const std::string &dict = "/usr/share/dict/words")
+{
+	std::ifstream file(dict);
+	file.seekg(0,std::ios_base::end);
+	file.seekg(rand() % file.tellg(),std::ios_base::beg);
+
+	std::string ret;
+	std::getline(file,ret);
+	std::getline(file,ret);
+	return chomp(ret,"'s");
+}
+
+
 struct scope
 {
 	typedef std::function<void ()> Func;
