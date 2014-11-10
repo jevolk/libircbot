@@ -18,16 +18,16 @@ thread_local decltype(irc::bot::Stream::sbuf) irc::bot::Stream::sbuf;     // str
 
 Bot::Bot(const Opts &opts)
 try:
+opts(opts),
 adb([&]
 {
-	if(!opts.get<bool>("database"))
+	if(!this->opts.get<bool>("database"))
 		return std::string();
 
-	mkdir(opts["dbdir"].c_str(),0777);
-	return opts["dbdir"] + "/ircbot";
+	mkdir(this->opts["dbdir"].c_str(),0777);
+	return this->opts["dbdir"] + "/ircbot";
 }()),
-sess(static_cast<std::mutex &>(*this),opts),
-opts(sess.get_opts()),
+sess(static_cast<std::mutex &>(*this),this->opts),
 users(adb,sess),
 chans(adb,sess),
 ns(adb,sess,users,chans),
@@ -119,7 +119,7 @@ cs(adb,sess,chans)
 
 	#undef EVENT
 
-	if(opts.get<bool>("connect"))
+	if(this->opts.get<bool>("connect"))
 		connect();
 }
 catch(const Internal &e)

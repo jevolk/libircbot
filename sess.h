@@ -9,7 +9,7 @@
 class Sess
 {
 	std::mutex &mutex;                                 // Bot mutex
-	Opts opts;
+	Opts &opts;
 	Socket socket;
 	Server server;                                     // Filled at connection time
 	std::set<std::string> caps;                        // registered extended capabilities
@@ -57,7 +57,7 @@ class Sess
 	void reg();
 	void cap();
 
-	Sess(std::mutex &mutex, const Opts &opts);
+	Sess(std::mutex &mutex, Opts &opts);
 	Sess(const Sess &) = delete;
 	Sess &operator=(const Sess &) = delete;
 
@@ -67,17 +67,17 @@ class Sess
 
 inline
 Sess::Sess(std::mutex &mutex,
-           const Opts &opts):
+           Opts &opts):
 mutex(mutex),
 opts(opts),
-socket(opts),
+socket(this->opts),
 nickname(this->opts["nick"]),
 registered(false),
 identified(false)
 {
 	// Use the same global locale for each session for now.
 	// Raise an issue if you have a case for this being a problem.
-	irc::bot::locale = std::locale(opts["locale"].c_str());
+	irc::bot::locale = std::locale(this->opts["locale"].c_str());
 
 }
 

@@ -118,9 +118,9 @@ using Chan = chan::Chan;
  */
 struct Bot : public std::mutex
 {
+	Opts opts;                                        // Options for this session
 	Adb adb;                                          // Document database (local ldb)
 	Sess sess;                                        // IRC client session
-	Opts &opts;                                       // Options for this session
 	Events events;                                    // Event handler registry
 	Users users;                                      // Users state
 	Chans chans;                                      // Channels state
