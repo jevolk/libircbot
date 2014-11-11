@@ -27,9 +27,9 @@ class Sess
 	state_t state;                                     // State flags
 	Socket socket;
 	Server server;                                     // Filled at connection time
+	Mode mymode;                                       // UMODE
 	std::set<std::string> caps;                        // registered capabilities (full LS in Server)
 	std::string nickname;                              // NICK reply
-	Mode mymode;                                       // UMODE
 	std::map<std::string,Mode> access;                 // Our channel access (/ns LISTCHANS)
 
 	// Handler accesses
@@ -66,10 +66,6 @@ class Sess
 	void umode(const std::string &m);
 	void umode();
 
-	void proxy();
-	void reg();
-	void cap();
-
 	Sess(std::mutex &mutex, Opts &opts);
 	Sess(const Sess &) = delete;
 	Sess &operator=(const Sess &) = delete;
@@ -91,39 +87,6 @@ nickname(this->opts["nick"])
 	// Raise an issue if you have a case for this being a problem.
 	irc::bot::locale = std::locale(this->opts["locale"].c_str());
 
-}
-
-
-inline
-void Sess::cap()
-{
-	socket << "CAP LS" << socket.flush;
-	socket << "CAP REQ :account-notify extended-join multi-prefix" << socket.flush;
-	socket << "CAP END" << socket.flush;
-}
-
-
-inline
-void Sess::reg()
-{
-	const auto &username = opts.has("user")? opts["user"] : "nobody";
-	const auto &gecos = opts.has("gecos")? opts["gecos"] : "nowhere";
-
-	socket << "NICK " << get_nick() << socket.flush;
-	socket << "USER " << username << " unknown unknown :" << gecos << socket.flush;
-
-	set(REGISTERED);
-}
-
-
-inline
-void Sess::proxy()
-{
-	const auto &host = opts["host"];
-	const auto &port = opts["port"];
-
-	// socket.flush adds the second CR-LF
-	socket << "CONNECT " << host << ":" << port << " HTTP/1.0\r\n" << socket.flush;
 }
 
 

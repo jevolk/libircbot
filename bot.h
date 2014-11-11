@@ -129,6 +129,10 @@ struct Bot : public std::mutex
 	ChanServ cs;                                      // ChanServ service parser
 
   private:
+	void connect_proxy();
+	void register_caps();
+	void register_user();
+
 	void log_handle(const Msg &m, const std::string &name = "") const;
 
 	void handle_unhandled(const Msg &m);

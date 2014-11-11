@@ -34,16 +34,9 @@ ns(adb,sess,users,chans),
 cs(adb,sess,chans)
 {
 	namespace ph = std::placeholders;
-	using flag_t = handler::flag_t;
 
 	users.set_service(ns);
 	chans.set_service(cs);
-
-	if(this->opts.has("proxy"))
-	{
-		events.msg.add("HTTP/1.0",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
-		events.msg.add("HTTP/1.1",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
-	}
 
 	#define EVENT(name,func)                                    \
 		events.msg.add(name,std::bind(&Bot::func,this,ph::_1),  \
@@ -276,21 +269,19 @@ void Bot::handle_conn(const boost::system::error_code &e)
 
 	cancel_timer();
 	sess.set(Sess::CONNECTED);
+	new_handle();
 
 	if(events.connected)
 		events.connected();
 
 	if(opts.has("proxy"))
-		sess.proxy();
+	{
+		connect_proxy();
+		return;
+	}
 
-	const FlushHold hold(sess);
-	if(opts.get<bool>("caps"))
-		sess.cap();
-
-	if(opts.get<bool>("registration"))
-		sess.reg();
-
-	new_handle();
+	register_caps();
+	register_user();
 }
 
 
@@ -333,6 +324,8 @@ void Bot::handle_http(const Msg &msg)
 	}
 
 	sess.set(Sess::PROXIED);
+	register_caps();
+	register_user();
 }
 
 
@@ -1473,6 +1466,45 @@ const
 	std::cout << "<< " << std::setw(24) << std::setfill(' ') << std::left << n;
 	std::cout << msg;
 	std::cout << std::endl;
+}
+
+
+void Bot::register_user()
+{
+	if(!opts.get<bool>("registration"))
+		return;
+
+	const auto &username = opts.has("user")? opts["user"] : "nobody";
+	const auto &gecos = opts.has("gecos")? opts["gecos"] : "nowhere";
+
+	Quote(sess,"NICK") << sess.get_nick();
+	Quote(sess,"USER") << username << " unknown unknown :" << gecos;
+
+	sess.set(Sess::REGISTERED);
+}
+
+
+void Bot::register_caps()
+{
+	if(!opts.get<bool>("caps"))
+		return;
+
+	Quote(sess,"CAP") << "LS";
+	Quote(sess,"CAP") << "REQ :account-notify extended-join multi-prefix";
+	Quote(sess,"CAP") << "END";
+	sess.set(Sess::CAP_REG);
+}
+
+
+void Bot::connect_proxy()
+{
+	namespace ph = std::placeholders;
+	using flag_t = handler::flag_t;
+
+	events.msg.add("HTTP/1.0",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
+	events.msg.add("HTTP/1.1",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
+
+	Quote(sess,"CONNECT") << opts["host"] << ":" << opts["port"] << " HTTP/1.0\r\n";
 }
 
 
