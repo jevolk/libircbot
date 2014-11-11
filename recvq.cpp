@@ -26,6 +26,44 @@ static const scope join([]
 });
 
 
+void recvq::interrupt()
+{
+	interrupted.store(true,std::memory_order_release);
+	ios.stop();
+}
+
+
+void recvq::reset()
+{
+	const std::lock_guard<decltype(mutex)> lock(mutex);
+	if(thread.size() <= 1)
+		ios.reset();
+}
+
+
+size_t recvq::num_threads()
+{
+	const std::lock_guard<decltype(mutex)> lock(mutex);
+	return thread.size();
+}
+
+
+void recvq::add_thread(const size_t &num)
+{
+	const std::lock_guard<decltype(mutex)> lock(mutex);
+	for(size_t i = 0; i < num; i++)
+		thread.emplace_back(new std::thread(&recvq::worker));
+}
+
+
+void recvq::min_threads(const size_t &num)
+{
+	const std::lock_guard<decltype(mutex)> lock(mutex);
+	for(size_t i = thread.size(); i < num; i++)
+		thread.emplace_back(new std::thread(&recvq::worker));
+}
+
+
 void recvq::worker()
 try
 {
@@ -40,42 +78,4 @@ try
 catch(const Interrupted &e)
 {
 	return;
-}
-
-
-void recvq::interrupt()
-{
-	interrupted.store(true,std::memory_order_release);
-	ios.stop();
-}
-
-
-void recvq::min_threads(const size_t &num)
-{
-	const std::lock_guard<decltype(mutex)> lock(mutex);
-	for(size_t i = thread.size(); i < num; i++)
-		thread.emplace_back(new std::thread(&recvq::worker));
-}
-
-
-void recvq::add_thread(const size_t &num)
-{
-	const std::lock_guard<decltype(mutex)> lock(mutex);
-	for(size_t i = 0; i < num; i++)
-		thread.emplace_back(new std::thread(&recvq::worker));
-}
-
-
-size_t recvq::num_threads()
-{
-	const std::lock_guard<decltype(mutex)> lock(mutex);
-	return thread.size();
-}
-
-
-void recvq::reset()
-{
-	const std::lock_guard<decltype(mutex)> lock(mutex);
-	if(thread.size() <= 1)
-		ios.reset();
 }

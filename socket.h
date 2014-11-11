@@ -5,6 +5,7 @@
  *  DISTRIBUTED UNDER THE GNU GENERAL PUBLIC LICENSE (GPL) (see: LICENSE)
  */
 
+
 namespace sendq
 {
 	struct Ent
@@ -21,11 +22,12 @@ namespace sendq
 	extern std::deque<Ent> slowq;
 	extern std::thread thread;
 
-	void interrupt();
+	void purge(const boost::asio::ip::tcp::socket *const &ptr);
 	size_t send(Ent &ent);
-	auto slowq_next();
 	void slowq_add(Ent &ent);
 	void process(Ent &ent);
+	auto slowq_next();
+	void interrupt();
 	void worker();
 }
 
@@ -77,7 +79,8 @@ class Socket
 	void set_delay(const milliseconds &delay)         { this->delay = delay;                      }
 	void set_hold()                                   { this->hold++;                             }
 	void unset_hold()                                 { this->hold--;                             }
-	void clear();
+	void purge()                                      { sendq::purge(&get_sd());                  }
+	void clear();                                     // Clears the instance sendq buffer
 
 	Socket &operator<<(const flush_t);
 	template<class T> Socket &operator<<(const T &t);
@@ -86,6 +89,7 @@ class Socket
 	void connect();
 
 	Socket(const Opts &opts);
+	~Socket() noexcept;
 };
 
 
@@ -115,6 +119,14 @@ delay(0ms),
 hold(0)
 {
 
+}
+
+
+inline
+Socket::~Socket()
+noexcept
+{
+	purge();
 }
 
 

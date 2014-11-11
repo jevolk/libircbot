@@ -31,6 +31,27 @@ void sendq::interrupt()
 }
 
 
+void sendq::purge(const boost::asio::ip::tcp::socket *const &ptr)
+{
+	const std::unique_lock<decltype(mutex)> lock(mutex);
+
+	const auto queue_end = std::remove_if(queue.begin(),queue.end(),[&ptr]
+	(const auto &ent)
+	{
+		return ent.sd == ptr;
+	});
+
+	const auto slowq_end = std::remove_if(slowq.begin(),slowq.end(),[&ptr]
+	(const auto &ent)
+	{
+		return ent.sd == ptr;
+	});
+
+	queue.erase(queue_end,queue.end());
+	slowq.erase(slowq_end,slowq.end());
+}
+
+
 size_t sendq::send(Ent &ent)
 try
 {
@@ -51,23 +72,6 @@ catch(const boost::system::system_error &e)
 }
 
 
-auto sendq::slowq_next()
-{
-	using namespace std::chrono;
-
-	if(slowq.empty())
-		return milliseconds(std::numeric_limits<uint32_t>::max());
-
-	const auto now = steady_clock::now();
-	const auto &abs = slowq.front().absolute;
-	if(abs < now)
-		return milliseconds(0);
-
-	return duration_cast<milliseconds>(abs.time_since_epoch()) -
-	       duration_cast<milliseconds>(now.time_since_epoch());
-}
-
-
 void sendq::slowq_add(Ent &ent)
 {
 	slowq.emplace_back(ent);
@@ -85,6 +89,23 @@ void sendq::process(Ent &ent)
 		slowq_add(ent);
 	else
 		send(ent);
+}
+
+
+auto sendq::slowq_next()
+{
+	using namespace std::chrono;
+
+	if(slowq.empty())
+		return milliseconds(std::numeric_limits<uint32_t>::max());
+
+	const auto now = steady_clock::now();
+	const auto &abs = slowq.front().absolute;
+	if(abs < now)
+		return milliseconds(0);
+
+	return duration_cast<milliseconds>(abs.time_since_epoch()) -
+	       duration_cast<milliseconds>(now.time_since_epoch());
 }
 
 
