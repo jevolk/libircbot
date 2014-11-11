@@ -14,6 +14,7 @@ using namespace irc::bot;
 decltype(sendq::mutex)        sendq::mutex;
 decltype(sendq::cond)         sendq::cond;
 decltype(sendq::interrupted)  sendq::interrupted;
+decltype(sendq::ecbs)         sendq::ecbs;
 decltype(sendq::queue)        sendq::queue;
 decltype(sendq::slowq)        sendq::slowq;
 decltype(sendq::thread)       sendq::thread {&sendq::worker};
@@ -31,9 +32,17 @@ void sendq::interrupt()
 }
 
 
-void sendq::purge(const boost::asio::ip::tcp::socket *const &ptr)
+void sendq::set_ecb(const void *const &ptr,
+                    const ErrorCb &cb)
 {
-	const std::unique_lock<decltype(mutex)> lock(mutex);
+	const std::lock_guard<decltype(mutex)> lock(mutex);
+	ecbs[ptr] = cb;
+}
+
+
+void sendq::purge(const void *const &ptr)
+{
+	const std::lock_guard<decltype(mutex)> lock(mutex);
 
 	const auto queue_end = std::remove_if(queue.begin(),queue.end(),[&ptr]
 	(const auto &ent)
@@ -49,6 +58,7 @@ void sendq::purge(const boost::asio::ip::tcp::socket *const &ptr)
 
 	queue.erase(queue_end,queue.end());
 	slowq.erase(slowq_end,slowq.end());
+	ecbs.erase(ptr);
 }
 
 
@@ -67,7 +77,15 @@ try
 }
 catch(const boost::system::system_error &e)
 {
-	std::cerr << "sendq::send(): " << e.what() << std::endl;
+	std::unique_lock<decltype(mutex)> lock(mutex);
+	const auto it = ecbs.find(ent.sd);
+	if(it != ecbs.end())
+	{
+		const auto cb = it->second;
+		lock.unlock();
+		cb(e.code());
+	}
+
 	return 0;
 }
 

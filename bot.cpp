@@ -38,6 +38,9 @@ cs(adb,sess,chans)
 	users.set_service(ns);
 	chans.set_service(cs);
 
+	Socket &sock = sess.get_socket();
+	sock.set_ecb(std::bind(&Bot::handle_socket_err,this,ph::_1));
+
 	#define EVENT(name,func)                                    \
 		events.msg.add(name,std::bind(&Bot::func,this,ph::_1),  \
 		               handler::RECURRING,                      \
@@ -239,6 +242,14 @@ bool Bot::cancel_timer()
 	Socket &sock = sess.get_socket();
 	sock.get_timer().cancel_one(ec);
 	return !ec;
+}
+
+
+void Bot::handle_socket_err(const boost::system::error_code &e)
+{
+	const std::lock_guard<Bot> lock(*this);
+	sess.set(Sess::ERRONEOUS);
+	std::cerr << opts["nick"] << ": " << e << std::endl;
 }
 
 

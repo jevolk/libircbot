@@ -15,14 +15,18 @@ namespace sendq
 		std::string pck;
 	};
 
+	using ErrorCb = std::function<void (const boost::system::error_code &)>;
+
 	extern std::mutex mutex;
 	extern std::condition_variable cond;
 	extern std::atomic<bool> interrupted;
+	extern std::map<const void *, ErrorCb> ecbs;
 	extern std::deque<Ent> queue;
 	extern std::deque<Ent> slowq;
 	extern std::thread thread;
 
-	void purge(const boost::asio::ip::tcp::socket *const &ptr);
+	void set_ecb(const void *const &ptr, const ErrorCb &cb);
+	void purge(const void *const &ptr);
 	size_t send(Ent &ent);
 	void slowq_add(Ent &ent);
 	void process(Ent &ent);
@@ -75,6 +79,7 @@ class Socket
 	auto &get_ep()                                    { return ep;                                }
 	auto &get_sd()                                    { return sd;                                }
 	auto &get_timer()                                 { return timer;                             }
+	void set_ecb(const sendq::ErrorCb &cb)            { sendq::set_ecb(&get_sd(),cb);             }
 	void set_throttle(const milliseconds &inc)        { this->throttle.set_inc(inc);              }
 	void set_delay(const milliseconds &delay)         { this->delay = delay;                      }
 	void set_cork()                                   { this->cork++;                             }

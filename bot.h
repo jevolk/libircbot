@@ -217,6 +217,7 @@ struct Bot : public std::mutex
 	void handle_pck(const boost::system::error_code &e, size_t size, std::shared_ptr<boost::asio::streambuf> sbuf);
 	void handle_conn(const boost::system::error_code &e);
 	void handle_timeout(const boost::system::error_code &e);
+	void handle_socket_err(const boost::system::error_code &e);
 
 	void set_handle(std::shared_ptr<boost::asio::streambuf> buf);
 	void new_handle();
