@@ -28,22 +28,22 @@ class FloodGuard
 };
 
 
-class FlushHold
+class Cork
 {
 	Socket &socket;
 
   public:
-	FlushHold(Sess &sess):
-	          socket(sess.get_socket())
+	Cork(Sess &sess):
+	     socket(sess.get_socket())
 	{
-		socket.set_hold();
+		socket.set_cork();
 	}
 
-	~FlushHold()
+	~Cork()
 	{
-		socket.unset_hold();
+		socket.unset_cork();
 
-		if(!socket.has_hold())
+		if(!socket.has_cork())
 			socket << socket.flush;
 	}
 };

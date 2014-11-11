@@ -57,7 +57,7 @@ class Socket
 	std::ostringstream sendq;
 	milliseconds delay;
 	Throttle throttle;
-	int hold;                                         // makes operator<<(flush_t) ineffective
+	int cork;                                         // makes operator<<(flush_t) ineffective
 
   public:
 	using flush_t = Stream::flush_t;
@@ -68,7 +68,7 @@ class Socket
 	auto &get_timer() const                           { return timer;                             }
 	auto &get_delay() const                           { return delay;                             }
 	auto &get_throttle() const                        { return throttle;                          }
-	auto has_hold() const                             { return hold > 0;                          }
+	auto has_cork() const                             { return cork > 0;                          }
 	auto has_pending() const                          { return !sendq.str().empty();              }
 	bool is_connected() const;
 
@@ -77,8 +77,8 @@ class Socket
 	auto &get_timer()                                 { return timer;                             }
 	void set_throttle(const milliseconds &inc)        { this->throttle.set_inc(inc);              }
 	void set_delay(const milliseconds &delay)         { this->delay = delay;                      }
-	void set_hold()                                   { this->hold++;                             }
-	void unset_hold()                                 { this->hold--;                             }
+	void set_cork()                                   { this->cork++;                             }
+	void unset_cork()                                 { this->cork--;                             }
 	void purge()                                      { sendq::purge(&get_sd());                  }
 	void clear();                                     // Clears the instance sendq buffer
 
@@ -116,7 +116,7 @@ ep([&]() -> decltype(ep)
 sd(recvq::ios),
 timer(recvq::ios),
 delay(0ms),
-hold(0)
+cork(0)
 {
 
 }
@@ -178,7 +178,7 @@ Socket &Socket::operator<<(const T &t)
 inline
 Socket &Socket::operator<<(const flush_t)
 {
-	if(has_hold())
+	if(has_cork())
 	{
 		sendq << "\r\n";
 		return *this;
