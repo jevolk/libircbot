@@ -51,7 +51,7 @@ class Socket
 	const Opts &opts;
 	boost::asio::ip::tcp::endpoint ep;
 	boost::asio::ip::tcp::socket sd;
-	boost::asio::basic_waitable_timer<steady_clock> timer;
+	boost::asio::steady_timer timer;
 	std::ostringstream sendq;
 	milliseconds delay;
 	Throttle throttle;

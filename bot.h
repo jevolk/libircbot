@@ -29,11 +29,12 @@
 #include <condition_variable>
 
 // boost
-#include <boost/asio.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio.hpp>
 
 // ircclient
 #include <libirc_rfcnumeric.h>
