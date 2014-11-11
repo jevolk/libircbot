@@ -26,24 +26,3 @@ class FloodGuard
 		socket.set_throttle(saved);
 	}
 };
-
-
-class Cork
-{
-	Socket &socket;
-
-  public:
-	Cork(Sess &sess):
-	     socket(sess.get_socket())
-	{
-		socket.set_cork();
-	}
-
-	~Cork()
-	{
-		socket.unset_cork();
-
-		if(!socket.has_cork())
-			socket << socket.flush;
-	}
-};

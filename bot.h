@@ -81,6 +81,7 @@ namespace handler
 #include "socket.h"
 #include "sess.h"
 #include "floodguard.h"
+#include "cork.h"
 #include "quote.h"
 #include "cmds.h"
 #include "locutor.h"
