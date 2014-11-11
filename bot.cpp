@@ -131,12 +131,37 @@ catch(const Internal &e)
 Bot::~Bot(void)
 noexcept try
 {
-	Socket &sock = sess.get_socket();
-	sock.disconnect();
+
+
 }
 catch(const Internal &e)
 {
 	std::cerr << "Bot::~Bot(): " << e << std::endl;
+	return;
+}
+
+
+void Bot::operator()(const Loop &loop)
+try
+{
+	switch(loop)
+	{
+		case FOREGROUND:
+			recvq::worker();
+			break;
+
+		case BACKGROUND:
+			recvq::min_threads(opts.get<size_t>("threads"));
+			break;
+	}
+}
+catch(const Internal &e)
+{
+	std::cerr << "\033[1;31mBot::run(): unhandled:\033[0m " << e << std::endl;
+	throw;
+}
+catch(const Interrupted &e)
+{
 	return;
 }
 
@@ -168,31 +193,6 @@ void Bot::quit()
 	Socket &sock = sess.get_socket();
 	const bool hard = opts["quit"] == "hard";
 	sock.disconnect(!hard);
-}
-
-
-void Bot::operator()(const Loop &loop)
-try
-{
-	switch(loop)
-	{
-		case FOREGROUND:
-			recvq::worker();
-			break;
-
-		case BACKGROUND:
-			recvq::min_threads(opts.get<size_t>("threads"));
-			break;
-	}
-}
-catch(const Internal &e)
-{
-	std::cerr << "\033[1;31mBot::run(): unhandled:\033[0m " << e << std::endl;
-	throw;
-}
-catch(const Interrupted &e)
-{
-	return;
 }
 
 
