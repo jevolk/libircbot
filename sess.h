@@ -8,43 +8,56 @@
 
 class Sess
 {
+  public:
+	enum State : uint16_t
+	{
+		ERRONEOUS          = 0x01,                     // The session cannot continue normally
+		CONNECTED          = 0x02,                     // Logical indication (socket indicator in Socket)
+		PROXIED            = 0x04,                     // If proxying, got 200 OK
+		CAP_REG            = 0x08,                     // CAP registration is open and has not ended
+		REGISTERED         = 0x10,                     // USER / ircd registration has taken place
+		IDENTIFIED         = 0x20,                     // NickServ identification confirmed
+	};
+
+	using state_t = std::underlying_type<State>::type;
+
+  private:
 	std::mutex &mutex;                                 // Bot mutex
 	Opts &opts;
+	state_t state;                                     // State flags
 	Socket socket;
 	Server server;                                     // Filled at connection time
-	std::set<std::string> caps;                        // registered extended capabilities
+	std::set<std::string> caps;                        // registered capabilities (full LS in Server)
 	std::string nickname;                              // NICK reply
-	bool registered;                                   // completed ircd registration
-	bool identified;                                   // identified to nickserv
 	Mode mymode;                                       // UMODE
 	std::map<std::string,Mode> access;                 // Our channel access (/ns LISTCHANS)
 
-  private:
 	// Handler accesses
 	friend class Bot;
 	friend class NickServ;
 	void set_nick(const std::string &nickname)         { this->nickname = nickname;                 }
-	void set_registered(const bool &registered)        { this->registered = registered;             }
-	void set_identified(const bool &identified)        { this->identified = identified;             }
 	void delta_mode(const std::string &str)            { mymode.delta(str);                         }
 
   public:
 	auto &get_mutex() const                            { return const_cast<std::mutex &>(mutex);    }
 	auto &get_opts() const                             { return opts;                               }
+	auto &get_state() const                            { return state;                              }
 	auto &get_socket() const                           { return socket;                             }
 	auto &get_server() const                           { return server;                             }
 	auto &get_isupport() const                         { return get_server().isupport;              }
 	auto &get_nick() const                             { return nickname;                           }
 	auto &get_mode() const                             { return mymode;                             }
 	auto &get_access() const                           { return access;                             }
-	auto get_acct() const                              { return tolower(opts["ns-acct"]);           }
-	auto isupport(const std::string &key) const        { return get_server().isupport(key);         }
+
 	auto has_opt(const std::string &key) const         { return opts.get<bool>(key);                }
 	bool has_cap(const std::string &cap) const         { return caps.count(cap);                    }
+	auto isupport(const std::string &key) const        { return get_server().isupport(key);         }
 	auto is_desired_nick() const                       { return nickname == opts["nick"];           }
-	auto is_connected() const                          { return socket.is_connected();              }
-	auto is_registered() const                         { return registered;                         }
-	auto is_identified() const                         { return identified;                         }
+	auto get_acct() const                              { return tolower(opts["ns-acct"]);           }
+
+	bool is(const State &state) const                  { return (this->state & state) == state;     }
+	void set(const State &state)                       { this->state |= state;                      }
+	void unset(const State &state)                     { this->state &= ~state;                     }
 
 	Socket &get_socket()                               { return socket;                             }
 	auto &get_mutex()                                  { return mutex;                              }
@@ -70,10 +83,9 @@ Sess::Sess(std::mutex &mutex,
            Opts &opts):
 mutex(mutex),
 opts(opts),
+state(0),
 socket(this->opts),
-nickname(this->opts["nick"]),
-registered(false),
-identified(false)
+nickname(this->opts["nick"])
 {
 	// Use the same global locale for each session for now.
 	// Raise an issue if you have a case for this being a problem.
@@ -100,7 +112,7 @@ void Sess::reg()
 	socket << "NICK " << get_nick() << socket.flush;
 	socket << "USER " << username << " unknown unknown :" << gecos << socket.flush;
 
-	set_registered(true);
+	set(REGISTERED);
 }
 
 

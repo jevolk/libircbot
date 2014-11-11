@@ -266,12 +266,17 @@ void Bot::handle_timeout(const boost::system::error_code &e)
 
 void Bot::handle_conn(const boost::system::error_code &e)
 {
-	cancel_timer();
+	const std::lock_guard<Bot> lock(*this);
 
 	if(e)
-		throw Internal(e.value(),e.message());
+	{
+		sess.set(Sess::ERRONEOUS);
+		return;
+	}
 
-	const std::lock_guard<Bot> lock(*this);
+	cancel_timer();
+	sess.set(Sess::CONNECTED);
+
 	if(events.connected)
 		events.connected();
 
@@ -302,6 +307,9 @@ void Bot::handle_pck(const boost::system::error_code &e,
 		throw Interrupted(e.value(),e.message());
 	}
 
+	if(size <= 2)
+		return;
+
 	std::istream istr(buf.get());
 	const Msg msg(istr);
 
@@ -317,7 +325,14 @@ void Bot::handle_http(const Msg &msg)
 
 	log_handle(msg,"HTTP");
 
+	if(msg[CODE] != "200")
+	{
+		sess.set(Sess::ERRONEOUS);
+		sess.get_socket().disconnect();
+		return;
+	}
 
+	sess.set(Sess::PROXIED);
 }
 
 
