@@ -92,7 +92,7 @@ class Socket
 inline
 Socket::Socket(const Opts &opts):
 opts(opts),
-ep([&]
+ep([&]() -> decltype(ep)
 {
 	using namespace boost::asio::ip;
 
