@@ -41,7 +41,7 @@ try
 		terminator
 	};
 
-	std::cout << std::setw(24) << "\033[1;36mSEND\033[0m" << ent.pck << std::endl;
+	std::cout << "\033[1;36m>> " << ent.pck << "\033[0m" << std::endl;
 	return ent.sd->send(buf);
 }
 catch(const boost::system::system_error &e)
