@@ -11,6 +11,7 @@
 
 inline namespace fmt
 {
+SPQF_FMT( HTTP,              CODE,     REASON    /* Not IRC proto; parsed when proxying */                   )
 SPQF_FMT( PING,              SOURCE                                                                          )
 SPQF_FMT( WELCOME,           TEXT                                                                            )
 SPQF_FMT( YOURHOST,          SELFNAME, TEXT                                                                  )

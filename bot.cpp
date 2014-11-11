@@ -34,9 +34,16 @@ ns(adb,sess,users,chans),
 cs(adb,sess,chans)
 {
 	namespace ph = std::placeholders;
+	using flag_t = handler::flag_t;
 
 	users.set_service(ns);
 	chans.set_service(cs);
+
+	if(this->opts.has("proxy"))
+	{
+		events.msg.add("HTTP/1.0",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
+		events.msg.add("HTTP/1.1",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
+	}
 
 	#define EVENT(name,func)                                    \
 		events.msg.add(name,std::bind(&Bot::func,this,ph::_1),  \
@@ -268,7 +275,7 @@ void Bot::handle_conn(const boost::system::error_code &e)
 	if(events.connected)
 		events.connected();
 
-	if(opts.has("proxy-host"))
+	if(opts.has("proxy"))
 		sess.proxy();
 
 	const FlushHold hold(sess);
@@ -301,6 +308,16 @@ void Bot::handle_pck(const boost::system::error_code &e,
 	const std::lock_guard<Bot> lock(*this);
 	events.msg(msg);
 	set_handle(buf);
+}
+
+
+void Bot::handle_http(const Msg &msg)
+{
+	using namespace fmt::HTTP;
+
+	log_handle(msg,"HTTP");
+
+
 }
 
 

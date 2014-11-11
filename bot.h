@@ -208,6 +208,7 @@ struct Bot : public std::mutex
 	void handle_welcome(const Msg &m);
 	void handle_error(const Msg &m);
 	void handle_ping(const Msg &m);
+	void handle_http(const Msg &m);
 
 	void handle_pck(const boost::system::error_code &e, size_t size, std::shared_ptr<boost::asio::streambuf> sbuf);
 	void handle_conn(const boost::system::error_code &e);

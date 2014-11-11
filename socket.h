@@ -96,13 +96,12 @@ ep([&]() -> decltype(ep)
 {
 	using namespace boost::asio::ip;
 
-	const auto &host = opts.has("proxy-host")? opts["proxy-host"] : opts["host"];
-	const auto &port = opts.has("proxy-port")? opts["proxy-port"] : opts["port"];
-
-	tcp::resolver res(recvq::ios);
-	tcp::resolver::query query(tcp::v4(),host,port,tcp::resolver::query::numeric_service);
+	const auto &host = opts.has("proxy")? split(opts["proxy"],":").first : opts["host"];
+	const auto &port = opts.has("proxy")? split(opts["proxy"],":").second : opts["port"];
 
 	boost::system::error_code ec;
+	tcp::resolver res(recvq::ios);
+	const tcp::resolver::query query(tcp::v4(),host,port,tcp::resolver::query::numeric_service);
 	const auto it = res.resolve(query,ec);
 
 	if(ec)

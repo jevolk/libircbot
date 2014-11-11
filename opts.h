@@ -23,6 +23,7 @@ struct Opts : public std::map<std::string,std::string>
 		{"host",                "chat.freenode.net"                       },
 		{"port",                "6667"                                    },
 		{"pass",                ""                                        },
+		{"proxy",               ""      /* host:port format */            },
 
 		// Misc configuration
 		{"locale",              ""                                        },
