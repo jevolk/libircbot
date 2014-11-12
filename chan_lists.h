@@ -15,10 +15,10 @@ struct Lists
 	List<Except> excepts;
 	List<Invite> invites;
 	List<AKick> akicks;
-	List<Flag> flags;
+	List<Flags> flags;
 
-	const Flag &get_flag(const Mask &m) const;
-	const Flag &get_flag(const User &u) const;
+	const Flags &get_flag(const Mask &m) const;
+	const Flags &get_flag(const User &u) const;
 	bool has_flag(const Mask &m) const;
 	bool has_flag(const User &u) const;
 	bool has_flag(const Mask &m, const char &flag) const;
@@ -39,7 +39,7 @@ void Lists::delta_flag(const Mask &mask,
 	if(it == flags.end())
 		it = flags.emplace(mask).first;
 
-	auto &f = const_cast<Flag &>(*it);
+	auto &f = const_cast<Flags &>(*it);
 	f.delta(delta);
 	f.update(time(NULL));
 }
@@ -97,7 +97,7 @@ const
 
 
 inline
-const Flag &Lists::get_flag(const User &u)
+const Flags &Lists::get_flag(const User &u)
 const
 {
 	return get_flag(u.get_acct());
@@ -105,7 +105,7 @@ const
 
 
 inline
-const Flag &Lists::get_flag(const Mask &m)
+const Flags &Lists::get_flag(const Mask &m)
 const
 {
 	const auto it = flags.find({m});

@@ -66,7 +66,7 @@ namespace colors
 #include "delta.h"
 #include "mode.h"
 #include "ban.h"
-#include "flag.h"
+#include "flags.h"
 #include "akick.h"
 #include "adoc.h"
 #include "msg.h"
