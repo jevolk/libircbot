@@ -25,6 +25,8 @@ class Handlers
 	template<class... Args> auto &add(const char *const &event, Args&&... args);
 	template<class... Args> auto &add(const uint &rpl_num, Args&&... args);
 
+	template<class... Args> void operator()(const std::string &name, Args&&... args);
+	template<class... Args> void operator()(const uint &num, Args&&... args);
 	template<class... Args> void operator()(const Msg &msg, Args&&... args);
 };
 
@@ -34,8 +36,27 @@ template<class... Args>
 void Handlers<Handler>::operator()(const Msg &msg,
                                    Args&&... args)
 {
-	auto itp = handlers.equal_range(msg.get_name());
+	const auto &name = msg.get_name();
+	operator()(name,msg,std::forward<Args>(args)...);
+}
 
+
+template<class Handler>
+template<class... Args>
+void Handlers<Handler>::operator()(const uint &num,
+                                   Args&&... args)
+{
+	const auto &name = lex_cast(num);
+	operator()(name,std::forward<Args>(args)...);
+}
+
+
+template<class Handler>
+template<class... Args>
+void Handlers<Handler>::operator()(const std::string &name,
+                                   Args&&... args)
+{
+	auto itp = handlers.equal_range(name);
 	const size_t itp_sz = std::distance(itp.first,itp.second);
 	std::vector<const Handler *> vec(any.size() + (itp_sz? itp_sz : miss.size()));
 	auto vit = pointers(any.begin(),any.end(),vec.begin());
@@ -55,7 +76,7 @@ void Handlers<Handler>::operator()(const Msg &msg,
 	});
 
 	for(const Handler *handler : vec)
-		(*handler)(msg,std::forward<Args>(args)...);
+		(*handler)(std::forward<Args>(args)...);
 
 	while(itp.first != itp.second)
 	{
