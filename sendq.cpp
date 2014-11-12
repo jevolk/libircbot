@@ -33,7 +33,7 @@ void sendq::interrupt()
 
 
 void sendq::set_ecb(const void *const &ptr,
-                    const ErrorCb &cb)
+                    const ECb &cb)
 {
 	const std::lock_guard<decltype(mutex)> lock(mutex);
 	ecbs[ptr] = cb;
@@ -77,12 +77,11 @@ try
 }
 catch(const boost::system::system_error &e)
 {
-	std::unique_lock<decltype(mutex)> lock(mutex);
 	const auto it = ecbs.find(ent.sd);
 	if(it != ecbs.end())
 	{
 		const auto cb = it->second;
-		lock.unlock();
+		const unlock_guard<decltype(mutex)> unlock(mutex);
 		cb(e.code());
 	}
 
@@ -110,9 +109,12 @@ void sendq::process(Ent &ent)
 }
 
 
-auto sendq::slowq_next()
+auto sendq::next_event()
 {
 	using namespace std::chrono;
+
+	if(!queue.empty())
+		return milliseconds(0);
 
 	if(slowq.empty())
 		return milliseconds(std::numeric_limits<uint32_t>::max());
@@ -133,15 +135,14 @@ try
 	while(1)
 	{
 		std::unique_lock<decltype(mutex)> lock(mutex);
-		cond.wait_for(lock,slowq_next());
-
+		cond.wait_for(lock,next_event());
 		if(interrupted.load(std::memory_order_consume))
 			throw Interrupted("Interrupted");
 
 		while(!queue.empty())
 		{
-			const scope pf([]{ queue.pop_front(); });
 			process(queue.front());
+			queue.pop_front();
 		}
 
 		while(!slowq.empty())

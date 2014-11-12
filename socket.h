@@ -15,24 +15,24 @@ namespace sendq
 		std::string pck;
 	};
 
-	using ErrorCb = std::function<void (const boost::system::error_code &)>;
+	using ECb = std::function<void (const boost::system::error_code &)>;
 
 	extern std::mutex mutex;
 	extern std::condition_variable cond;
 	extern std::atomic<bool> interrupted;
-	extern std::map<const void *, ErrorCb> ecbs;
+	extern std::map<const void *, ECb> ecbs;
 	extern std::deque<Ent> queue;
 	extern std::deque<Ent> slowq;
 	extern std::thread thread;
 
-	void set_ecb(const void *const &ptr, const ErrorCb &cb);
-	void purge(const void *const &ptr);
-	size_t send(Ent &ent);
-	void slowq_add(Ent &ent);
-	void process(Ent &ent);
-	auto slowq_next();
-	void interrupt();
-	void worker();
+	void set_ecb(const void *const &p, const ECb &c); // No lock required.
+	void purge(const void *const &p);                 // No lock required.
+	size_t send(Ent &ent);                            // Lock required (internal usage)
+	void slowq_add(Ent &ent);                         // Lock required (internal usage)
+	void process(Ent &ent);                           // Lock required (internal usage)
+	auto next_event();                                // Lock required (internal usage)
+	void interrupt();                                 // No lock required.
+	void worker();                                    // Static initialized. Not advised to call.
 }
 
 
@@ -43,12 +43,12 @@ namespace recvq
 	extern boost::asio::io_service ios;
 	extern std::vector<std::thread *> thread;
 
-	void reset();
-	size_t num_threads();
-	void add_thread(const size_t &num = 1);
-	void min_threads(const size_t &num = 0);
-	void interrupt();
-	void worker();
+	void reset();                                     // No lock required.
+	size_t num_threads();                             // No lock required.
+	void add_thread(const size_t &num = 1);           // No lock required.
+	void min_threads(const size_t &num = 0);          // No lock required.
+	void interrupt();                                 // No lock required.
+	void worker();                                    // User may call in own threads. No lock required.
 }
 
 
@@ -79,7 +79,7 @@ class Socket
 	auto &get_ep()                                    { return ep;                                }
 	auto &get_sd()                                    { return sd;                                }
 	auto &get_timer()                                 { return timer;                             }
-	void set_ecb(const sendq::ErrorCb &cb)            { sendq::set_ecb(&get_sd(),cb);             }
+	void set_ecb(const sendq::ECb &cb)                { sendq::set_ecb(&get_sd(),cb);             }
 	void set_throttle(const milliseconds &inc)        { this->throttle.set_inc(inc);              }
 	void set_delay(const milliseconds &delay)         { this->delay = delay;                      }
 	void set_cork()                                   { this->cork++;                             }
