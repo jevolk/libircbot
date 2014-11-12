@@ -65,17 +65,16 @@ void recvq::min_threads(const size_t &num)
 
 
 void recvq::worker()
-try
 {
 	const boost::asio::io_service::work work(ios);
 
-	while(!interrupted.load(std::memory_order_consume))
+	while(!interrupted.load(std::memory_order_consume)) try
 	{
 		const scope r(std::bind(&recvq::reset));
 		ios.run();
 	}
-}
-catch(const Interrupted &e)
-{
-	return;
+	catch(const Interrupted &e)
+	{
+		continue;
+	}
 }
