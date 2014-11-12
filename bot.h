@@ -130,11 +130,12 @@ struct Bot : public std::mutex
 	ChanServ cs;                                      // ChanServ service parser
 
   private:
+	void log_handle(const Msg &m, const std::string &name = "") const;
+	void state_change(const Sess::state_t &enter, const Sess::state_t &leave = Sess::NONE);
+
 	void connect_proxy();
 	void register_caps();
 	void register_user();
-
-	void log_handle(const Msg &m, const std::string &name = "") const;
 
 	void handle_unhandled(const Msg &m);
 	void handle_caction_owner(const Msg &m, Chan &c, User &u);
@@ -221,6 +222,7 @@ struct Bot : public std::mutex
 	void handle_socket_err(const boost::system::error_code &e);
 
 	void set_handle(std::shared_ptr<boost::asio::streambuf> buf);
+	bool cancel_handle();
 	void new_handle();
 
   public:

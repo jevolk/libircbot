@@ -11,12 +11,26 @@ class Sess
   public:
 	enum State : uint16_t
 	{
-		ERRONEOUS          = 0x01,                     // The session cannot continue normally
-		CONNECTED          = 0x02,                     // Logical indication (socket indicator in Socket)
-		PROXIED            = 0x04,                     // If proxying, got 200 OK
-		CAP_REG            = 0x08,                     // CAP registration is open and has not ended
-		REGISTERED         = 0x10,                     // USER / ircd registration has taken place
-		IDENTIFIED         = 0x20,                     // NickServ identification confirmed
+		// Special masks
+		NONE               = 0x0000,                   // Mask for no states
+		ALL                = 0xffff,                   // Mask for all states
+
+		// Connect process
+		CONNECTING         = 0x0001,                   // Attemping a TCP connection to target
+		CONNECTED          = 0x0002,                   // TCP handshake successful to target
+		PROXYING           = 0x0004,                   // If proxying, sent a CONNECT
+		PROXIED            = 0x0008,                   // If proxying, got 200 OK
+		NEGOTIATING        = 0x0010,                   // CAP registration is open and has not ended
+		NEGOTIATED         = 0x0020,                   // CAP registration has ended
+		REGISTERING        = 0x0040,                   // USER/ircd registration in progress
+		REGISTERED         = 0x0080,                   // USER/ircd registration has taken place
+
+		// In-Session
+		IDENTIFIED         = 0x0100,                   // NickServ identification confirmed
+
+		// Erroneous
+		TIMEOUT            = 0x4000,                   // A timeout event (cleared after handled)
+		ERROR              = 0x8000,                   // The session cannot continue normally
 	};
 
 	using state_t = std::underlying_type<State>::type;

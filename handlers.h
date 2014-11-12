@@ -16,6 +16,8 @@ enum Special
 template<class Handler>
 class Handlers
 {
+	static std::string name_cast(const uint &num);
+
 	std::multimap<std::string, Handler> handlers;
 	std::list<Handler> any, miss;
 
@@ -46,7 +48,7 @@ template<class... Args>
 void Handlers<Handler>::operator()(const uint &num,
                                    Args&&... args)
 {
-	const auto &name = lex_cast(num);
+	const auto name = name_cast(num);
 	operator()(name,std::forward<Args>(args)...);
 }
 
@@ -56,11 +58,10 @@ template<class... Args>
 void Handlers<Handler>::operator()(const std::string &name,
                                    Args&&... args)
 {
-	auto itp = handlers.equal_range(name);
+	const auto itp = handlers.equal_range(name);
 	const size_t itp_sz = std::distance(itp.first,itp.second);
 	std::vector<const Handler *> vec(any.size() + (itp_sz? itp_sz : miss.size()));
 	auto vit = pointers(any.begin(),any.end(),vec.begin());
-
 	if(itp_sz)
 		std::transform(itp.first,itp.second,vit,[](const auto &vt)
 		{
@@ -78,13 +79,13 @@ void Handlers<Handler>::operator()(const std::string &name,
 	for(const Handler *handler : vec)
 		(*handler)(std::forward<Args>(args)...);
 
-	while(itp.first != itp.second)
+	for(auto it = itp.first; it != itp.second; )
 	{
-		const auto &handler = itp.first->second;
+		const auto &handler = it->second;
 		if(!handler.is(RECURRING))
-			handlers.erase(itp.first++);
+			handlers.erase(it++);
 		else
-			++itp.first;
+			++it;
 	}
 
 	any.remove_if([](const auto &handler)
@@ -105,9 +106,8 @@ template<class... Args>
 auto &Handlers<Handler>::add(const uint &num,
                              Args&&... args)
 {
-	std::stringstream name;
-	name << std::setw(3) << std::setfill('0') << num;
-	return add(name.str(),Handler{std::forward<Args>(args)...});
+	const auto event = name_cast(num);
+	return add(event,Handler{std::forward<Args>(args)...});
 }
 
 
@@ -149,4 +149,13 @@ auto &Handlers<Handler>::add(const Special &spec,
 		default:
 			throw Assertive("Special event type not known");
 	}
+}
+
+
+template<class Handler>
+std::string Handlers<Handler>::name_cast(const uint &num)
+{
+	std::stringstream name;
+	name << std::setw(3) << std::setfill('0') << num;
+	return name.str();
 }
