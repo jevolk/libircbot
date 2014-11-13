@@ -36,14 +36,13 @@ class Flags
 	Flags(const Mask &mask     = Mask(),
 	      const Mode &flags    = Mode(),
 	      const time_t &time   = 0,
-	      const bool &founder  = false):
-	      mask(mask), flags(flags), time(time), founder(founder) {}
-
-	Flags(const Delta &delta,
-	      const time_t &time,
 	      const bool &founder  = false);
 
 	Flags(const Deltas &deltas,
+	      const time_t &time,
+	      const bool &founder  = false);
+
+	Flags(const Delta &delta,
 	      const time_t &time,
 	      const bool &founder  = false);
 
@@ -67,8 +66,8 @@ Flags(std::get<Delta::MASK>(delta),
 
 inline
 Flags::Flags(const Deltas &deltas,
-            const time_t &time,
-            const bool &founder):
+             const time_t &time,
+             const bool &founder):
 mask(deltas.empty()? Mask() : std::get<Delta::MASK>(deltas.at(0))),
 time(time),
 founder(founder)
@@ -78,6 +77,20 @@ founder(founder)
 
 	for(const Delta &d : deltas)
 		flags.push_back(std::get<Delta::MODE>(d));
+}
+
+
+inline
+Flags::Flags(const Mask &mask,
+             const Mode &flags,
+             const time_t &time,
+             const bool &founder):
+mask(mask),
+flags(flags),
+time(time),
+founder(founder)
+{
+
 }
 
 

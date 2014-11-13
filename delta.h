@@ -14,8 +14,8 @@ struct Delta : std::tuple<bool,char,Mask>
 	static char sign(const bool &b)                 { return b? '+' : '-';                         }
 	static bool sign(const char &s)                 { return s != '-';                             }
 	static bool is_sign(const char &s)              { return s == '-' || s == '+';                 }
-	static bool needs_inv_mask(const char &m);      // Modes that take an argument which is not a Mask
 
+	static bool needs_inv_mask(const char &m);      // Modes that take an argument which is not a Mask
 	bool need_mask_chan(const Server &s) const;
 	bool need_mask_user(const Server &s) const;
 	bool exists_chan(const Server &s) const;
