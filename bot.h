@@ -78,6 +78,14 @@ namespace handler
 #include "adb.h"
 #include "acct.h"
 #include "stream.h"
+namespace sendq
+{
+	#include "sendq.h"
+}
+namespace recvq
+{
+	#include "recvq.h"
+}
 #include "socket.h"
 #include "sess.h"
 #include "floodguard.h"
