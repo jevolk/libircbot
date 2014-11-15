@@ -9,9 +9,9 @@
 class Socket
 {
 	const Opts &opts;
+	boost::asio::io_service &ios;
 	boost::asio::ip::tcp::endpoint ep;
 	boost::asio::ip::tcp::socket sd;
-	boost::asio::steady_timer timer;
 	std::ostringstream sendq;
 	milliseconds delay;
 	Throttle throttle;
@@ -23,7 +23,6 @@ class Socket
 
 	auto &get_ep() const                              { return ep;                                }
 	auto &get_sd() const                              { return sd;                                }
-	auto &get_timer() const                           { return timer;                             }
 	auto &get_delay() const                           { return delay;                             }
 	auto &get_throttle() const                        { return throttle;                          }
 	auto has_cork() const                             { return cork > 0;                          }
@@ -32,7 +31,6 @@ class Socket
 
 	auto &get_ep()                                    { return ep;                                }
 	auto &get_sd()                                    { return sd;                                }
-	auto &get_timer()                                 { return timer;                             }
 	void set_ecb(const sendq::ECb &cb)                { sendq::set_ecb(&get_sd(),cb);             }
 	void set_throttle(const milliseconds &inc)        { this->throttle.set_inc(inc);              }
 	void set_delay(const milliseconds &delay)         { this->delay = delay;                      }
@@ -45,16 +43,18 @@ class Socket
 	template<class T> Socket &operator<<(const T &t);
 
 	bool disconnect(const bool &fin = true);
-	void connect();
+	void connect();                                   // Blocking/Synchronous
 
-	Socket(const Opts &opts);
+	Socket(const Opts &opts, boost::asio::io_service &ios);
 	~Socket() noexcept;
 };
 
 
 inline
-Socket::Socket(const Opts &opts):
+Socket::Socket(const Opts &opts,
+               boost::asio::io_service &ios):
 opts(opts),
+ios(ios),
 ep([&]() -> decltype(ep)
 {
 	using namespace boost::asio::ip;
@@ -63,7 +63,7 @@ ep([&]() -> decltype(ep)
 	const auto &port = opts.has("proxy")? split(opts["proxy"],":").second : opts["port"];
 
 	boost::system::error_code ec;
-	tcp::resolver res(recvq::ios);
+	tcp::resolver res(ios);
 	const tcp::resolver::query query(tcp::v4(),host,port,tcp::resolver::query::numeric_service);
 	const auto it = res.resolve(query,ec);
 
@@ -72,8 +72,7 @@ ep([&]() -> decltype(ep)
 
 	return *it;
 }()),
-sd(recvq::ios),
-timer(recvq::ios),
+sd(ios),
 delay(0ms),
 cork(0)
 {
@@ -116,7 +115,6 @@ try
 	}
 
 	sd.close();
-	timer.cancel();
 	return true;
 }
 catch(const boost::system::system_error &e)

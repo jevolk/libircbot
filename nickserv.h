@@ -10,6 +10,7 @@ class NickServ : public Service
 {
 	Users &users;
 	Chans &chans;
+	Events &events;
 
 	void handle_identified(const Capture &capture);
 	void handle_listchans(const Capture &capture);
@@ -23,8 +24,8 @@ class NickServ : public Service
 	void ghost(const std::string &nick, const std::string &pass);
 	void listchans();
 
-	NickServ(Adb &adb, Sess &sess, Users &users, Chans &chans):
-	         Service(adb,sess,"NickServ"), users(users), chans(chans) {}
+	NickServ(Adb &adb, Sess &sess, Users &users, Chans &chans, Events &events):
+	         Service(adb,sess,"NickServ"), users(users), chans(chans), events(events) {}
 };
 
 
@@ -130,7 +131,8 @@ inline
 void NickServ::handle_identified(const Capture &capture)
 {
 	Sess &sess = get_sess();
-	sess.set(Sess::IDENTIFIED);
+	sess.set(IDENTIFIED);
+	events.state(State::ACTIVE,State::ACTIVE);
 	chans.autojoin();
 	listchans();
 }

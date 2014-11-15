@@ -16,7 +16,8 @@ decltype(irc::bot::locale) irc::bot::locale;                              // uti
 thread_local decltype(irc::bot::Stream::sbuf) irc::bot::Stream::sbuf;     // stream.h
 
 
-Bot::Bot(const Opts &opts)
+Bot::Bot(const Opts &opts,
+         boost::asio::io_service *const &ios)
 try:
 opts(opts),
 adb([&]
@@ -27,10 +28,12 @@ adb([&]
 	mkdir(this->opts["dbdir"].c_str(),0777);
 	return this->opts["dbdir"] + "/ircbot";
 }()),
-sess(static_cast<std::mutex &>(*this),this->opts),
+sess(this->opts,
+     static_cast<std::mutex &>(*this),
+     ios? *ios : recvq::ios),
 users(adb,sess),
 chans(adb,sess),
-ns(adb,sess,users,chans),
+ns(adb,sess,users,chans,events),
 cs(adb,sess,chans)
 {
 	namespace ph = std::placeholders;
@@ -38,8 +41,35 @@ cs(adb,sess,chans)
 	users.set_service(ns);
 	chans.set_service(cs);
 
-	Socket &sock = sess.get_socket();
-	sock.set_ecb(std::bind(&Bot::handle_socket_err,this,ph::_1));
+	auto &sock = sess.get_socket();
+	sock.set_ecb(std::bind(&Bot::handle_socket_ecb,this,ph::_1));
+	init_handlers();
+
+	if(this->opts.get<bool>("connect"))
+		connect();
+}
+catch(const Internal &e)
+{
+	std::cerr << "Bot::Bot(): " << e << std::endl;
+}
+
+
+Bot::~Bot(void)
+noexcept try
+{
+
+
+}
+catch(const Internal &e)
+{
+	std::cerr << "Bot::~Bot(): " << e << std::endl;
+	return;
+}
+
+
+void Bot::init_handlers()
+{
+	namespace ph = std::placeholders;
 
 	#define EVENT(name,func)                                    \
 		events.msg.add(name,std::bind(&Bot::func,this,ph::_1),  \
@@ -121,26 +151,6 @@ cs(adb,sess,chans)
 	EVENT( LIBIRC_RFC_ERR_CANNOTSENDTOCHAN, handle_cannotsendtochan)
 
 	#undef EVENT
-
-	if(this->opts.get<bool>("connect"))
-		connect();
-}
-catch(const Internal &e)
-{
-	std::cerr << "Bot::Bot(): " << e << std::endl;
-}
-
-
-Bot::~Bot(void)
-noexcept try
-{
-	state_change(Sess::NONE,Sess::ALL);
-
-}
-catch(const Internal &e)
-{
-	std::cerr << "Bot::~Bot(): " << e << std::endl;
-	return;
 }
 
 
@@ -173,16 +183,20 @@ void Bot::connect(const milliseconds &to)
 {
 	namespace ph = std::placeholders;
 
-	auto &sock = sess.get_socket();
-	auto &sd = sock.get_sd();
-	auto &ep = sock.get_ep();
+	state(State::CONNECTING);
 
-	state_change(Sess::CONNECTING);
-
-	if(to > 0ms)
+	if(to == 0ms)
+		set_timeout();
+	else if(to > 0ms)
 		set_timer(to);
 
-	sd.async_connect(ep,std::bind(&Bot::handle_conn,this,ph::_1));
+	sess.post([&]
+	{
+		auto &sock = sess.get_socket();
+		auto &ep = sock.get_ep();
+		auto &sd = sock.get_sd();
+		sd.async_connect(ep,std::bind(&Bot::handle_conn,this,ph::_1));
+	});
 }
 
 
@@ -195,10 +209,11 @@ void Bot::quit()
 		return;
 	}
 
-	Socket &sock = sess.get_socket();
+	auto &sock = sess.get_socket();
 	const bool hard = opts["quit"] == "hard";
-	state_change(Sess::NONE,Sess::ALL);
 	sock.disconnect(!hard);
+	sess.unset(Flag::ALL);
+	state(State::INACTIVE);
 }
 
 
@@ -216,8 +231,7 @@ void Bot::set_timer(const milliseconds &ms)
 	if(ms < 0ms)
 		return;
 
-	Socket &sock = sess.get_socket();
-	auto &timer = sock.get_timer();
+	auto &timer = sess.get_timer();
 	timer.expires_from_now(ms);
 	timer.async_wait(std::bind(&Bot::handle_timeout,this,ph::_1));
 }
@@ -226,8 +240,8 @@ void Bot::set_timer(const milliseconds &ms)
 bool Bot::cancel_timer()
 {
 	boost::system::error_code ec;
-	Socket &sock = sess.get_socket();
-	sock.get_timer().cancel_one(ec);
+	auto &timer = sess.get_timer();
+	timer.cancel_one(ec);
 	return !ec;
 }
 
@@ -241,7 +255,7 @@ void Bot::new_handle()
 bool Bot::cancel_handle()
 {
 	boost::system::error_code ec;
-	Socket &sock = sess.get_socket();
+	auto &sock = sess.get_socket();
 	sock.get_sd().cancel(ec);
 	return !ec;
 }
@@ -251,17 +265,20 @@ void Bot::set_handle(std::shared_ptr<boost::asio::streambuf> buf)
 {
 	namespace ph = std::placeholders;
 
-	Socket &sock = sess.get_socket();
-	const auto hf = std::bind(&Bot::handle_pck,this,ph::_1,ph::_2,buf);
+	auto &sock = sess.get_socket();
+	const auto hf = sess.wrap(std::bind(&Bot::handle_pck,this,ph::_1,ph::_2,buf));
 	boost::asio::async_read_until(sock.get_sd(),*buf,"\r\n",hf);
 }
 
 
-void Bot::handle_socket_err(const boost::system::error_code &e)
+void Bot::handle_socket_ecb(const boost::system::error_code &e)
 {
 	const std::lock_guard<Bot> lock(*this);
-	state_change(Sess::ERROR,Sess::ALL);
-	std::cerr << opts["nick"] << ": " << e << std::endl;
+	auto &sock = sess.get_socket();
+	sess.set_current_exception();
+	sess.set(Flag::SOCKERR);
+	sock.purge();
+	state(State::FAULT);
 }
 
 
@@ -271,23 +288,28 @@ void Bot::handle_timeout(const boost::system::error_code &e)
 		return;
 
 	const std::lock_guard<Bot> lock(*this);
-	state_change(Sess::TIMEOUT);
-	state_change(Sess::NONE,Sess::TIMEOUT);
+	sess.set(Flag::TIMEOUT);
+	state(State::FAULT);
 }
 
 
 void Bot::handle_conn(const boost::system::error_code &e)
 {
-	const std::lock_guard<Bot> lock(*this);
-
 	if(e)
 	{
-		state_change(Sess::ERROR);
+		if(e == boost::asio::error::operation_aborted)
+			return;
+
+		const std::lock_guard<Bot> lock(*this);
+		sess.set_exception(boost::system::system_error(e));
+		sess.set(Flag::SOCKERR);
+		state(State::FAULT);
 		return;
 	}
 
+	const std::lock_guard<Bot> lock(*this);
+	sess.set(Flag::CONNECTED);
 	cancel_timer();
-	state_change(Sess::CONNECTED,Sess::CONNECTING);
 	new_handle();
 
 	if(opts.has("proxy"))
@@ -307,16 +329,21 @@ void Bot::handle_pck(const boost::system::error_code &e,
 {
 	if(e)
 	{
+		if(e == boost::asio::error::operation_aborted)
+			return;
+
 		const std::lock_guard<Bot> lock(*this);
-		state_change(Sess::ERROR);
-		throw Interrupted(e.value(),e.message());
+		sess.set_exception(boost::system::system_error(e));
+		sess.set(Flag::SOCKERR);
+		state(State::FAULT);
+		return;
 	}
 
 	if(size <= 2)
 		return;
 
-	std::istream istr(buf.get());
-	const Msg msg(istr);
+	std::istream stream(buf.get());
+	const Msg msg(stream);
 
 	const std::lock_guard<Bot> lock(*this);
 	events.msg(msg);
@@ -332,12 +359,10 @@ void Bot::handle_http(const Msg &msg)
 
 	if(msg[CODE] != "200")
 	{
-		state_change(Sess::ERROR);
 		sess.get_socket().disconnect();
 		return;
 	}
 
-	state_change(Sess::PROXIED,Sess::PROXYING);
 	register_caps();
 	register_user();
 }
@@ -470,7 +495,6 @@ void Bot::handle_quit(const Msg &msg)
 	// We have quit
 	if(msg.get_nick() == sess.get_nick())
 	{
-		state_change(Sess::NONE,Sess::ALL);
 		return;
 	}
 
@@ -1464,8 +1488,8 @@ void Bot::handle_modeislocked(const Msg &msg)
 
 void Bot::handle_error(const Msg &msg)
 {
-	state_change(Sess::ERROR,Sess::ALL);
-	throw Interrupted(msg[0]);
+	sess.set(Flag::SERVERR);
+	state(State::FAULT);
 }
 
 
@@ -1487,8 +1511,6 @@ void Bot::register_user()
 	const Cork cork(sess);
 	Quote(sess,"NICK") << sess.get_nick();
 	Quote(sess,"USER") << username << " unknown unknown :" << gecos;
-
-	state_change(Sess::REGISTERING);
 }
 
 
@@ -1516,23 +1538,24 @@ void Bot::connect_proxy()
 }
 
 
-void Bot::state_change(const Sess::state_t &enter,
-                       const Sess::state_t &leave)
+void Bot::state_next()
 {
-	using State = Sess::State;
-	using state_t = Sess::state_t;
+	const auto cur = state_t(sess.get_state());
+	const auto next = cur + 1;
+	state(State(next));
+}
 
-	auto cur = sess.get_state();
-	sess.unset(State(leave));
-	for(state_t i = 1; i != 0; i <<= 1)
-		if((leave & i) && (cur & i))
-			events.state_leave(i,State(i));
 
-	cur = sess.get_state();
-	sess.set(State(enter));
-	for(state_t i = 1; i != 0; i <<= 1)
-		if((enter & i) && !(cur & i))
-			events.state_enter(i,State(i));
+void Bot::state(const State &state)
+{
+	sess.post([&,state,this]
+	{
+		const std::lock_guard<Bot> lock(*this);
+		const auto last = sess.get_state();
+		sess.set(state);
+		events.state_leave(last,last);
+		events.state(state,state);
+	});
 }
 
 

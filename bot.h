@@ -70,6 +70,7 @@ namespace colors
 #include "akick.h"
 #include "adoc.h"
 #include "msg.h"
+#include "state.h"
 namespace handler
 {
 	#include "handler.h"
@@ -106,9 +107,9 @@ namespace chan
 using Chan = chan::Chan;
 #include "users.h"
 #include "chans.h"
+#include "events.h"
 #include "nickserv.h"
 #include "chanserv.h"
-#include "events.h"
 
 /**
  * Primary libircbot object
@@ -123,8 +124,11 @@ using Chan = chan::Chan;
  *		
  * This class is protected by a simple mutex via the lock()/unlock() concept:
  *	- Mutex is locked when handling events.
- *		+ The handlers you override operate under this lock.
+ *		+ The handlers operate under this lock when called.
  *	- If you access this class asynchronously outside of the handler stack you must lock.
+ *
+ * To destruct the Bot instance from inside a handler, pass a lambda of your destruction
+ * routine to sess.post().
  */
 struct Bot : public std::mutex
 {
@@ -137,14 +141,16 @@ struct Bot : public std::mutex
 	NickServ ns;                                      // NickServ service parser
 	ChanServ cs;                                      // ChanServ service parser
 
-  private:
-	void log_handle(const Msg &m, const std::string &name = "") const;
-	void state_change(const Sess::state_t &enter, const Sess::state_t &leave = Sess::NONE);
+  protected:
+	void state(const State &state);
+	void state_next();
 
+	void log_handle(const Msg &m, const std::string &name = "") const;
 	void connect_proxy();
 	void register_caps();
 	void register_user();
 
+  private:
 	void handle_unhandled(const Msg &m);
 	void handle_caction_owner(const Msg &m, Chan &c, User &u);
 	void handle_ctcp_version(const Msg &m);
@@ -227,29 +233,29 @@ struct Bot : public std::mutex
 	void handle_pck(const boost::system::error_code &e, size_t size, std::shared_ptr<boost::asio::streambuf> sbuf);
 	void handle_conn(const boost::system::error_code &e);
 	void handle_timeout(const boost::system::error_code &e);
-	void handle_socket_err(const boost::system::error_code &e);
+	void handle_socket_ecb(const boost::system::error_code &e);
 
-	void set_handle(std::shared_ptr<boost::asio::streambuf> buf);
-	bool cancel_handle();
-	void new_handle();
-
-  public:
 	bool cancel_timer();                              // cancel one timer
+	bool cancel_handle();
+	void set_handle(std::shared_ptr<boost::asio::streambuf> buf);
 	void set_timer(const milliseconds &ms);           // set a timer for anything
 	void set_timeout();                               // set_timer(opts["timeout"])
+	void new_handle();
+	void init_handlers();
 
-	void quit();
+  public:
 	void join(const std::string &chan)                { chans.join(chan);                  }
-	void connect(const milliseconds &to = 0ms);       // default no timeout
+	void quit();
+
 	void disconnect()                                 { sess.get_socket().disconnect();    }
+	void connect(const milliseconds &to = 0ms);       // default no timeout
 
 	enum Loop { FOREGROUND, BACKGROUND };
 	void operator()(const Loop &loop);                // Run worker loop
 	void operator()(const Msg &msg)                   { events.msg(msg);                   }  // manual dispatch
 
-
 	Bot(void) = delete;
-	Bot(const Opts &opts);
+	Bot(const Opts &opts, boost::asio::io_service *const &ios = nullptr);
 	Bot(Bot &&) = delete;
 	Bot(const Bot &) = delete;
 	Bot &operator=(Bot &&) = delete;

@@ -16,7 +16,7 @@ enum Special
 template<class Handler>
 class Handlers
 {
-	static std::string name_cast(const uint &num);
+	template<class T> static std::string name_cast(const T &num);
 
 	std::multimap<std::string, Handler> handlers;
 	std::list<Handler> any, miss;
@@ -25,12 +25,23 @@ class Handlers
 	template<class... Args> auto &add(const Special &special, Args&&... args);
 	template<class... Args> auto &add(const std::string &event, Args&&... args);
 	template<class... Args> auto &add(const char *const &event, Args&&... args);
-	template<class... Args> auto &add(const uint &rpl_num, Args&&... args);
+	template<class T, class... Args> auto &add(const T &num, Args&&... args);
 
 	template<class... Args> void operator()(const std::string &name, Args&&... args);
-	template<class... Args> void operator()(const uint &num, Args&&... args);
 	template<class... Args> void operator()(const Msg &msg, Args&&... args);
+	template<class T, class... Args> void operator()(const T &num, Args&&... args);
 };
+
+
+template<class Handler>
+template<class T,
+         class... Args>
+void Handlers<Handler>::operator()(const T &num,
+                                   Args&&... args)
+{
+	const auto name = name_cast(num);
+	operator()(name,std::forward<Args>(args)...);
+}
 
 
 template<class Handler>
@@ -45,16 +56,6 @@ void Handlers<Handler>::operator()(const Msg &msg,
 
 template<class Handler>
 template<class... Args>
-void Handlers<Handler>::operator()(const uint &num,
-                                   Args&&... args)
-{
-	const auto name = name_cast(num);
-	operator()(name,std::forward<Args>(args)...);
-}
-
-
-template<class Handler>
-template<class... Args>
 void Handlers<Handler>::operator()(const std::string &name,
                                    Args&&... args)
 {
@@ -62,13 +63,14 @@ void Handlers<Handler>::operator()(const std::string &name,
 	const size_t itp_sz = std::distance(itp.first,itp.second);
 	std::vector<const Handler *> vec(any.size() + (itp_sz? itp_sz : miss.size()));
 	auto vit = pointers(any.begin(),any.end(),vec.begin());
+
 	if(itp_sz)
+		pointers(miss.begin(),miss.end(),vit);
+	else
 		std::transform(itp.first,itp.second,vit,[](const auto &vt)
 		{
-			return &(vt.second);
+			return &vt.second;
 		});
-	else
-		pointers(miss.begin(),miss.end(),vit);
 
 	std::sort(vec.begin(),vec.end(),[]
 	(const auto &a, const auto &b)
@@ -76,7 +78,7 @@ void Handlers<Handler>::operator()(const std::string &name,
 		return a->get_prio() < b->get_prio();
 	});
 
-	for(const Handler *handler : vec)
+	for(const auto &handler : vec)
 		(*handler)(std::forward<Args>(args)...);
 
 	for(auto it = itp.first; it != itp.second; )
@@ -102,12 +104,13 @@ void Handlers<Handler>::operator()(const std::string &name,
 
 
 template<class Handler>
-template<class... Args>
-auto &Handlers<Handler>::add(const uint &num,
+template<class T,
+         class... Args>
+auto &Handlers<Handler>::add(const T &num,
                              Args&&... args)
 {
 	const auto event = name_cast(num);
-	return add(event,Handler{std::forward<Args>(args)...});
+	return add(event,std::forward<Args>(args)...);
 }
 
 
@@ -153,9 +156,10 @@ auto &Handlers<Handler>::add(const Special &spec,
 
 
 template<class Handler>
-std::string Handlers<Handler>::name_cast(const uint &num)
+template<class T>
+std::string Handlers<Handler>::name_cast(const T &num)
 {
 	std::stringstream name;
-	name << std::setw(3) << std::setfill('0') << num;
+	name << std::setw(3) << std::setfill('0') << ssize_t(num);
 	return name.str();
 }

@@ -28,7 +28,7 @@ struct Events
 	Handlers<Handler<Msg>> msg;
 
 	// Session state change
-	using State = void (const Sess::State &);
-	Handlers<Handler<State>> state_enter;
+	using State = void (const bot::State &);
 	Handlers<Handler<State>> state_leave;
+	Handlers<Handler<State>> state;
 };
