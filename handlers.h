@@ -8,8 +8,10 @@
 
 enum Special
 {
-	ALL,
-	MISSING,
+	ALL,         // Called on anything no matter what
+	MISS,        // Called if no mapped handlers found (one-times discarded even if not called)
+
+	_NUM_SPECIAL
 };
 
 
@@ -19,7 +21,7 @@ class Handlers
 	template<class T> static std::string name_cast(const T &num);
 
 	std::multimap<std::string, Handler> handlers;
-	std::list<Handler> any, miss;
+	std::vector<std::list<Handler>> specials            { _NUM_SPECIAL                       };
 
   public:
 	template<class... Args> auto &add(const Special &special, Args&&... args);
@@ -30,7 +32,29 @@ class Handlers
 	template<class... Args> void operator()(const std::string &name, Args&&... args);
 	template<class... Args> void operator()(const Msg &msg, Args&&... args);
 	template<class T, class... Args> void operator()(const T &num, Args&&... args);
+
+	void clear(const std::string &event)                { handlers.erase(event);             }
+	void clear(const Special &special)                  { specials[special].clear();         }
+	void clear_handlers()                               { handlers.clear();                  }
+	void clear_specials();                              // clears all Special handlers
+	void clear();                                       // clears everything
 };
+
+
+template<class Handler>
+void Handlers<Handler>::clear()
+{
+	clear_specials();
+	clear_handlers();
+}
+
+
+template<class Handler>
+void Handlers<Handler>::clear_specials()
+{
+	for(auto &s : specials)
+		s.clear();
+}
 
 
 template<class Handler>
@@ -59,47 +83,41 @@ template<class... Args>
 void Handlers<Handler>::operator()(const std::string &name,
                                    Args&&... args)
 {
+	// Find out how many handlers will be called
 	const auto itp = handlers.equal_range(name);
 	const size_t itp_sz = std::distance(itp.first,itp.second);
-	std::vector<const Handler *> vec(any.size() + (itp_sz? itp_sz : miss.size()));
-	auto vit = pointers(any.begin(),any.end(),vec.begin());
+	const size_t vec_sz = specials[ALL].size() + (itp_sz? itp_sz : specials[MISS].size());
+
+	// Gather pointers to all relevant handlers
+	std::vector<const Handler *> vec(vec_sz);
+	auto vit = pointers(specials[ALL].begin(),specials[ALL].end(),vec.begin());
 
 	if(itp_sz)
-		pointers(miss.begin(),miss.end(),vit);
+		std::transform(itp.first,itp.second,vit,[](const auto &vt) { return &vt.second; });
 	else
-		std::transform(itp.first,itp.second,vit,[](const auto &vt)
-		{
-			return &vt.second;
-		});
+		pointers(specials[MISS].begin(),specials[MISS].end(),vit);
 
+	// Sort calling order based on handler priority
 	std::sort(vec.begin(),vec.end(),[]
 	(const auto &a, const auto &b)
 	{
 		return a->get_prio() < b->get_prio();
 	});
 
-	for(const auto &handler : vec)
+	// Call handlers
+	for(const Handler *const &handler : vec)
 		(*handler)(std::forward<Args>(args)...);
 
+	// Erase one-time mapped handlers
 	for(auto it = itp.first; it != itp.second; )
-	{
-		const auto &handler = it->second;
-		if(!handler.is(RECURRING))
+		if(!it->second.is(RECURRING))
 			handlers.erase(it++);
 		else
 			++it;
-	}
 
-	any.remove_if([](const auto &handler)
-	{
-		return !handler.is(RECURRING);
-	});
-
-	if(!itp_sz)
-		miss.remove_if([](const auto &handler)
-		{
-			return !handler.is(RECURRING);
-		});
+	// Erase one-time Special handlers (note: one-time MISS handlers erased even if never called)
+	for(auto &s : specials)
+		s.remove_if([](const auto &handler) { return !handler.is(RECURRING); });
 }
 
 
@@ -139,19 +157,8 @@ template<class... Args>
 auto &Handlers<Handler>::add(const Special &spec,
                              Args&&... args)
 {
-	switch(spec)
-	{
-		case ALL:
-			any.emplace_back(Handler{std::forward<Args>(args)...});
-			return any.back();
-
-		case MISSING:
-			miss.emplace_back(Handler{std::forward<Args>(args)...});
-			return miss.back();
-
-		default:
-			throw Assertive("Special event type not known");
-	}
+	specials.at(spec).emplace_back(Handler{std::forward<Args>(args)...});
+	return specials.at(spec).back();
 }
 
 
