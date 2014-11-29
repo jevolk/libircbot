@@ -42,11 +42,11 @@ class Sess
 	auto &get_access() const                           { return access;                             }
 	auto &get_eptr() const                             { return eptr;                               }
 
+	bool has_exception() const                         { return bool(eptr);                         }
 	bool is(const State &state) const                  { return this->state == state;               }
 	bool is(const Flag &flags) const                   { return (this->flags & flags) == flags;     }
 	auto has_opt(const std::string &key) const         { return opts.get<bool>(key);                }
 	bool has_cap(const std::string &cap) const         { return caps.count(cap);                    }
-	bool has_exception() const                         { return bool(eptr);                         }
 	auto isupport(const std::string &key) const        { return get_server().isupport(key);         }
 	auto is_desired_nick() const                       { return nick == opts["nick"];               }
 	auto get_acct() const                              { return tolower(opts["ns-acct"]);           }

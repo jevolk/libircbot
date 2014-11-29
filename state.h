@@ -26,15 +26,15 @@ enum Flag : uint16_t
 };
 
 
-enum class State : uint8_t
+enum class State : int8_t
 {
+	FAULT              = -1,             // Handling of exceptional events
 	INACTIVE           = 0,              // The session is inactive or was terminated
 	CONNECTING         = 1,              // Attemping a TCP connection to target
 	PROXYING           = 2,              // If proxying, sent a CONNECT, awaiting response
 	NEGOTIATING        = 3,              // CAP registration is open and has not ended
 	REGISTERING        = 4,              // USER/ircd registration in progress
 	ACTIVE             = 5,              // Normal handling of IRC events
-	FAULT              = 6,              // Handling of exceptional events
 };
 
 

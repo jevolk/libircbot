@@ -43,7 +43,8 @@ cs(adb,sess,chans)
 
 	auto &sock = sess.get_socket();
 	sock.set_ecb(std::bind(&Bot::handle_socket_ecb,this,ph::_1));
-	init_handlers();
+	init_state_handlers();
+	init_irc_handlers();
 
 	if(this->opts.get<bool>("connect"))
 		connect();
@@ -67,16 +68,52 @@ catch(const Internal &e)
 }
 
 
-void Bot::init_handlers()
+void Bot::init_state_handlers()
 {
 	namespace ph = std::placeholders;
 
-	#define EVENT(name,func)                                    \
-		events.msg.add(name,std::bind(&Bot::func,this,ph::_1),  \
-		               handler::RECURRING,                      \
+	#define ENTER(name,func) \
+		events.state.add(name,std::bind(&Bot::func,this,ph::_1),    \
+		                 handler::RECURRING,                        \
+		                 handler::Prio::LIB);
+
+	#define LEAVE(name,func) \
+		events.state_leave.add(name,std::bind(&Bot::func,this,ph::_1),     \
+		                       handler::RECURRING,                         \
+		                       handler::Prio::LIB);
+
+	ENTER(State::FAULT, enter_state_fault)
+	ENTER(State::CONNECTING, enter_state_connecting)
+
+	if(opts.has("proxy"))
+		ENTER(State::PROXYING, enter_state_proxying)
+
+	if(opts.has("caps"))
+	{
+		ENTER(State::NEGOTIATING, enter_state_negotiating)
+		LEAVE(State::NEGOTIATING, leave_state_negotiating)
+	}
+
+	if(opts.has("registration"))
+		ENTER(State::REGISTERING, enter_state_registering)
+
+	ENTER(State::ACTIVE, enter_state_active)
+	ENTER(handler::MISS, enter_state_unhandled)
+
+	#undef LEAVE
+	#undef ENTER
+}
+
+void Bot::init_irc_handlers()
+{
+	namespace ph = std::placeholders;
+
+	#define EVENT(name,func) \
+		events.msg.add(name,std::bind(&Bot::func,this,ph::_1),     \
+		               handler::RECURRING,                         \
 		               handler::Prio::LIB);
 
-	EVENT( handler::MISSING, handle_unhandled)
+	EVENT( handler::MISS, handle_unhandled)
 
 	EVENT( "ERROR", handle_error)
 	EVENT( "QUIT", handle_quit)
@@ -179,39 +216,32 @@ catch(const Interrupted &e)
 }
 
 
-void Bot::connect(const milliseconds &to)
+void Bot::quit()
 {
-	namespace ph = std::placeholders;
-
-	state(State::CONNECTING);
-
-	if(to == 0ms)
-		set_timeout();
-	else if(to > 0ms)
-		set_timer(to);
-
-	sess.post([&]
+	sess.post([this]
 	{
-		auto &sock = sess.get_socket();
-		auto &ep = sock.get_ep();
-		auto &sd = sock.get_sd();
-		sd.async_connect(ep,std::bind(&Bot::handle_conn,this,ph::_1));
+		if(sess.is(State::ACTIVE) && sess.has_opt("quit") && opts["quit"] != "hard")
+			Quote(sess,"QUIT") << " :" << opts["quit-msg"];
+		else
+			disconnect();
 	});
 }
 
 
-void Bot::quit()
+void Bot::connect()
 {
-	const Opts &opts = sess.get_opts();
-	if(opts.get<bool>("quit"))
-	{
-		Quote(sess,"QUIT") << " :" << opts["quit-msg"];
-		return;
-	}
+	state(State::CONNECTING);
+}
 
+
+void Bot::disconnect()
+{
+	if(sess.is(State::INACTIVE) || !sess.is(Flag::CONNECTED))
+		return;
+
+	cancel_timer(true);
 	auto &sock = sess.get_socket();
-	const bool hard = opts["quit"] == "hard";
-	sock.disconnect(!hard);
+	sock.disconnect(opts["quit"] != "hard");
 	sess.unset(Flag::ALL);
 	state(State::INACTIVE);
 }
@@ -237,11 +267,16 @@ void Bot::set_timer(const milliseconds &ms)
 }
 
 
-bool Bot::cancel_timer()
+bool Bot::cancel_timer(const bool &all)
 {
 	boost::system::error_code ec;
 	auto &timer = sess.get_timer();
-	timer.cancel_one(ec);
+
+	if(all)
+		timer.cancel(ec);
+	else
+		timer.cancel_one(ec);
+
 	return !ec;
 }
 
@@ -311,15 +346,7 @@ void Bot::handle_conn(const boost::system::error_code &e)
 	sess.set(Flag::CONNECTED);
 	cancel_timer();
 	new_handle();
-
-	if(opts.has("proxy"))
-	{
-		connect_proxy();
-		return;
-	}
-
-	register_caps();
-	register_user();
+	state_next();
 }
 
 
@@ -351,38 +378,75 @@ void Bot::handle_pck(const boost::system::error_code &e,
 }
 
 
-void Bot::handle_http(const Msg &msg)
+void Bot::enter_state_connecting(const State &st)
 {
-	using namespace fmt::HTTP;
+	namespace ph = std::placeholders;
 
-	log_handle(msg,"HTTP");
+	log(st,"Entered CONNECTING");
 
-	if(msg[CODE] != "200")
-	{
-		sess.get_socket().disconnect();
-		return;
-	}
-
-	register_caps();
-	register_user();
+	auto &sock = sess.get_socket();
+	auto &ep = sock.get_ep();
+	auto &sd = sock.get_sd();
+	set_timeout();
+	sd.async_connect(ep,std::bind(&Bot::handle_conn,this,ph::_1));
 }
 
 
-void Bot::handle_ping(const Msg &msg)
+void Bot::enter_state_fault(const State &st)
 {
-	using namespace fmt::PING;
+	log(st,"Entered FAULT");
 
-	log_handle(msg,"PING");
-
-	Quote(sess,"PONG") << msg[SOURCE];
+	if(sess.is(Flag::TIMEOUT))
+		disconnect();
 }
 
 
-void Bot::handle_welcome(const Msg &msg)
+void Bot::enter_state_proxying(const State &st)
 {
-	log_handle(msg,"WELCOME");
+	namespace ph = std::placeholders;
+	using flag_t = handler::flag_t;
 
-	const Opts &opts = sess.get_opts();
+	log(st,"Entered PROXYING");
+
+	events.msg.add("HTTP/1.0",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
+	events.msg.add("HTTP/1.1",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
+	Quote(sess,"CONNECT") << opts["host"] << ":" << opts["port"] << " HTTP/1.0\r\n";
+}
+
+
+void Bot::enter_state_negotiating(const State &st)
+{
+	log(st,"Entered NEGOTIATING; Negotiating capabilities...");
+
+	Quote(sess,"CAP") << "LS";
+}
+
+
+void Bot::leave_state_negotiating(const State &st)
+{
+	log(st,"Leaving NEGOTIATING");
+
+	if(sess.is(Flag::NEGOTIATED))
+		Quote(sess,"CAP") << "END";
+}
+
+
+void Bot::enter_state_registering(const State &st)
+{
+	log(st,"Entered REGISTERING");
+
+	const auto &username = opts.has("user")? opts["user"] : "nobody";
+	const auto &gecos = opts.has("gecos")? opts["gecos"] : "nowhere";
+
+	const Cork cork(sess);
+	Quote(sess,"NICK") << sess.get_nick();
+	Quote(sess,"USER") << username << " unknown unknown :" << gecos;
+}
+
+
+void Bot::enter_state_active(const State &st)
+{
+	log(st,"Entered ACTIVE");
 
 	if(opts.has("umode"))
 		Quote(sess,"MODE") << sess.get_nick() << " " << opts["umode"];
@@ -394,6 +458,59 @@ void Bot::handle_welcome(const Msg &msg)
 	}
 
 	chans.autojoin();
+}
+
+
+void Bot::enter_state_unhandled(const State &st)
+{
+	if(state_t(st) <= 0)
+		return;
+
+	log(st,"No handlers. Skipping...");
+	state_next();
+}
+
+
+void Bot::handle_http(const Msg &msg)
+{
+	using namespace fmt::HTTP;
+
+	log(msg,"HTTP");
+
+	if(!sess.is(State::PROXYING))
+		throw Assertive("HTTP Msg when not PROXYING");
+
+	if(sess.is(PROXIED))
+		throw Assertive("HTTP Msg but Sess indicates PROXIED");
+
+	if(msg[CODE] != "200")
+	{
+		sess.get_socket().disconnect();
+		state(State::FAULT);
+		return;
+	}
+
+	sess.set(PROXIED);
+	state_next();
+}
+
+
+void Bot::handle_ping(const Msg &msg)
+{
+	using namespace fmt::PING;
+
+	log(msg,"PING");
+
+	Quote(sess,"PONG") << msg[SOURCE];
+}
+
+
+void Bot::handle_welcome(const Msg &msg)
+{
+	log(msg,"WELCOME");
+
+	sess.set(Flag::REGISTERED);
+	state(State::ACTIVE);
 }
 
 
@@ -465,10 +582,21 @@ void Bot::handle_cap(const Msg &msg)
 	{
 		case hash("LS"):
 			server.caps.insert(caps.begin(),caps.end());
+
+			if(sess.is(State::NEGOTIATING))
+				Quote(sess,"CAP") << "REQ :account-notify extended-join multi-prefix";
+
 			break;
 
 		case hash("ACK"):
 			sess.caps.insert(caps.begin(),caps.end());
+
+			if(sess.is(State::NEGOTIATING))
+			{
+				sess.set(Flag::NEGOTIATED);
+				state_next();
+			}
+
 			break;
 
 		case hash("LIST"):
@@ -495,6 +623,7 @@ void Bot::handle_quit(const Msg &msg)
 	// We have quit
 	if(msg.get_nick() == sess.get_nick())
 	{
+		state(State::INACTIVE);
 		return;
 	}
 
@@ -1495,46 +1624,8 @@ void Bot::handle_error(const Msg &msg)
 
 void Bot::handle_unhandled(const Msg &msg)
 {
-	log_handle(msg);
+	log(msg);
 
-}
-
-
-void Bot::register_user()
-{
-	if(!opts.get<bool>("registration"))
-		return;
-
-	const auto &username = opts.has("user")? opts["user"] : "nobody";
-	const auto &gecos = opts.has("gecos")? opts["gecos"] : "nowhere";
-
-	const Cork cork(sess);
-	Quote(sess,"NICK") << sess.get_nick();
-	Quote(sess,"USER") << username << " unknown unknown :" << gecos;
-}
-
-
-void Bot::register_caps()
-{
-	if(!opts.get<bool>("caps"))
-		return;
-
-	const Cork cork(sess);
-	Quote(sess,"CAP") << "LS";
-	Quote(sess,"CAP") << "REQ :account-notify extended-join multi-prefix";
-	Quote(sess,"CAP") << "END";
-}
-
-
-void Bot::connect_proxy()
-{
-	namespace ph = std::placeholders;
-	using flag_t = handler::flag_t;
-
-	events.msg.add("HTTP/1.0",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
-	events.msg.add("HTTP/1.1",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
-
-	Quote(sess,"CONNECT") << opts["host"] << ":" << opts["port"] << " HTTP/1.0\r\n";
 }
 
 
@@ -1563,9 +1654,18 @@ void Bot::log(const Msg &msg,
               const std::string &name)
 {
 	const std::string &n = name.empty()? msg.get_name() : name;
-	std::cout << "<< " << std::setw(24) << std::setfill(' ') << std::left << n;
-	std::cout << msg;
-	std::cout << std::endl;
+	std::cout << "<< " << std::setw(24) << std::setfill(' ') << std::left << n
+	          << msg
+	          << std::endl;
+}
+
+
+void Bot::log(const State &state,
+              const std::string &remarks)
+{
+	std::cout << "** STATE " << std::setw(24) << std::setfill(' ') << std::left << int(state)
+	          << remarks
+	          << std::endl;
 }
 
 
