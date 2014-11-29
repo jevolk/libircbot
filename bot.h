@@ -120,8 +120,8 @@ using Chan = chan::Chan;
  *	1. Add event handlers to the appropriate events structure.
  *	2. Fill in an 'Opts' options structure (opts.h) and instance of this bot in your project.
  *	3. Operate the controls:
- *		conn() - initiate the connection to server
- *		run() - runs the event processing
+ *		connect() - initiate the connection to server. Async (returns immediately).
+ *		operator() - runs the event processing for the instance.
  *		
  * This class is protected by a simple mutex via the lock()/unlock() concept:
  *	- Mutex is locked when handling events.
