@@ -266,7 +266,7 @@ struct Bot : public std::mutex
 
 	// Execution
 	enum Loop { FOREGROUND, BACKGROUND };
-	void operator()(const Loop &loop);                // Run worker loop
+	void operator()(const Loop &loop = FOREGROUND);   // Run worker loop
 	void operator()(const Msg &msg)                   { events.msg(msg);      }  // manual dispatch (lock required)
 
 	Bot(void) = delete;
