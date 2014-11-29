@@ -151,6 +151,8 @@ struct Bot : public std::mutex
 	void register_user();
 
   private:
+	static void log(const Msg &m, const std::string &name = "");
+
 	void handle_unhandled(const Msg &m);
 	void handle_caction_owner(const Msg &m, Chan &c, User &u);
 	void handle_ctcp_version(const Msg &m);

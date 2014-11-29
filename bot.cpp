@@ -399,14 +399,14 @@ void Bot::handle_welcome(const Msg &msg)
 
 void Bot::handle_yourhost(const Msg &msg)
 {
-	log_handle(msg,"YOURHOST");
+	log(msg,"YOURHOST");
 
 }
 
 
 void Bot::handle_created(const Msg &msg)
 {
-	log_handle(msg,"CREATED");
+	log(msg,"CREATED");
 
 }
 
@@ -415,7 +415,7 @@ void Bot::handle_myinfo(const Msg &msg)
 {
 	using namespace fmt::MYINFO;
 
-	log_handle(msg,"MYINFO");
+	log(msg,"MYINFO");
 
 	Server &server = sess.server;
 	server.name = msg[SERVNAME];
@@ -428,7 +428,7 @@ void Bot::handle_myinfo(const Msg &msg)
 
 void Bot::handle_isupport(const Msg &msg)
 {
-	log_handle(msg,"ISUPPORT");
+	log(msg,"ISUPPORT");
 
 	Server &server = sess.server;
 	const std::string &self = msg[0];
@@ -447,7 +447,7 @@ void Bot::handle_isupport(const Msg &msg)
 
 void Bot::handle_authenticate(const Msg &msg)
 {
-	log_handle(msg,"AUTHENTICATE");
+	log(msg,"AUTHENTICATE");
 
 
 }
@@ -457,7 +457,7 @@ void Bot::handle_cap(const Msg &msg)
 {
 	using namespace fmt::CAP;
 
-	log_handle(msg,"CAP");
+	log(msg,"CAP");
 
 	Server &server = sess.server;
 	const auto caps = tokens(msg[CAPLIST]);
@@ -490,7 +490,7 @@ void Bot::handle_quit(const Msg &msg)
 {
 	using namespace fmt::QUIT;
 
-	log_handle(msg,"QUIT");
+	log(msg,"QUIT");
 
 	// We have quit
 	if(msg.get_nick() == sess.get_nick())
@@ -518,7 +518,7 @@ void Bot::handle_nick(const Msg &msg)
 {
 	using namespace fmt::NICK;
 
-	log_handle(msg,"NICK");
+	log(msg,"NICK");
 
 	const auto &old_nick = msg.get_nick();
 	const auto &new_nick = msg[NICKNAME];
@@ -548,7 +548,7 @@ void Bot::handle_account(const Msg &msg)
 {
 	using namespace fmt::ACCOUNT;
 
-	log_handle(msg,"ACCOUNT");
+	log(msg,"ACCOUNT");
 
 	User &user = users.add(msg.get_nick());
 	user.set_acct(msg[ACCTNAME]);
@@ -560,7 +560,7 @@ void Bot::handle_join(const Msg &msg)
 {
 	using namespace fmt::JOIN;
 
-	log_handle(msg,"JOIN");
+	log(msg,"JOIN");
 
 	const auto &acct = sess.has_cap("extended-join")? msg[ACCTNAME] : std::string();
 	User &user = users.add(msg.get_nick(),msg.get_host(),acct);
@@ -602,7 +602,7 @@ void Bot::handle_part(const Msg &msg)
 {
 	using namespace fmt::PART;
 
-	log_handle(msg,"PART");
+	log(msg,"PART");
 
 	User &user = users.get(msg.get_nick());
 	Chan &chan = chans.get(msg[CHANNAME]);
@@ -623,7 +623,7 @@ void Bot::handle_mode(const Msg &msg)
 {
 	using namespace fmt::MODE;
 
-	log_handle(msg,"MODE");
+	log(msg,"MODE");
 
 	// Our UMODE
 	if(msg.num_params() == 1)
@@ -675,7 +675,7 @@ void Bot::handle_umode(const Msg &msg)
 {
 	using namespace fmt::UMODE;
 
-	log_handle(msg,"UMODE");
+	log(msg,"UMODE");
 
 	sess.delta_mode(msg[DELTASTR]);
 }
@@ -685,7 +685,7 @@ void Bot::handle_umodeis(const Msg &msg)
 {
 	using namespace fmt::UMODEIS;
 
-	log_handle(msg,"UMODEIS");
+	log(msg,"UMODEIS");
 
 	sess.delta_mode(msg[DELTASTR]);
 }
@@ -695,7 +695,7 @@ void Bot::handle_ison(const Msg &msg)
 {
 	using namespace fmt::ISON;
 
-	log_handle(msg,"ISON");
+	log(msg,"ISON");
 
 	const std::vector<std::string> list = tokens(msg[NICKLIST]);
 }
@@ -705,7 +705,7 @@ void Bot::handle_away(const Msg &msg)
 {
 	using namespace fmt::AWAY;
 
-	log_handle(msg,"AWAY");
+	log(msg,"AWAY");
 
 	User &user = users.get(msg[NICKNAME]);
 	user.set_away(true);
@@ -717,7 +717,7 @@ void Bot::handle_channelmodeis(const Msg &msg)
 {
 	using namespace fmt::CHANNELMODEIS;
 
-	log_handle(msg,"CHANNELMODEIS");
+	log(msg,"CHANNELMODEIS");
 
 	const Server &serv = sess.get_server();
 	Chan &chan = chans.get(msg[CHANNAME]);
@@ -733,7 +733,7 @@ void Bot::handle_chanoprivsneeded(const Msg &msg)
 {
 	using namespace fmt::CHANOPRIVSNEEDED;
 
-	log_handle(msg,"CHANOPRIVSNEEDED");
+	log(msg,"CHANOPRIVSNEEDED");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	events.chan(msg,chan);
@@ -744,7 +744,7 @@ void Bot::handle_creationtime(const Msg &msg)
 {
 	using namespace fmt::CREATIONTIME;
 
-	log_handle(msg,"CREATION TIME");
+	log(msg,"CREATION TIME");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	chan.set_creation(msg.get<time_t>(TIME));
@@ -756,7 +756,7 @@ void Bot::handle_topicwhotime(const Msg &msg)
 {
 	using namespace fmt::TOPICWHOTIME;
 
-	log_handle(msg,"TOPIC WHO TIME");
+	log(msg,"TOPIC WHO TIME");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	std::get<Mask>(chan.set_topic()) = msg[MASK];
@@ -769,7 +769,7 @@ void Bot::handle_banlist(const Msg &msg)
 {
 	using namespace fmt::BANLIST;
 
-	log_handle(msg,"BAN LIST");
+	log(msg,"BAN LIST");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	chan.lists.bans.emplace(msg[BANMASK],msg[OPERATOR],msg.get<time_t>(TIME));
@@ -781,7 +781,7 @@ void Bot::handle_invitelist(const Msg &msg)
 {
 	using namespace fmt::INVITELIST;
 
-	log_handle(msg,"INVITE LIST");
+	log(msg,"INVITE LIST");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	chan.lists.invites.emplace(msg[MASK],msg[OPERATOR],msg.get<time_t>(TIME));
@@ -793,7 +793,7 @@ void Bot::handle_exceptlist(const Msg &msg)
 {
 	using namespace fmt::EXCEPTLIST;
 
-	log_handle(msg,"EXEMPT LIST");
+	log(msg,"EXEMPT LIST");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	chan.lists.excepts.emplace(msg[MASK],msg[OPERATOR],msg.get<time_t>(TIME));
@@ -805,7 +805,7 @@ void Bot::handle_quietlist(const Msg &msg)
 {
 	using namespace fmt::QUIETLIST;
 
-	log_handle(msg,"728 LIST");
+	log(msg,"728 LIST");
 
 	if(msg[MODECODE] != "q")
 	{
@@ -823,7 +823,7 @@ void Bot::handle_topic(const Msg &msg)
 {
 	using namespace fmt::TOPIC;
 
-	log_handle(msg,"TOPIC");
+	log(msg,"TOPIC");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	std::get<std::string>(chan.set_topic()) = msg[TEXT];
@@ -835,7 +835,7 @@ void Bot::handle_rpltopic(const Msg &msg)
 {
 	using namespace fmt::RPLTOPIC;
 
-	log_handle(msg,"RPLTOPIC");
+	log(msg,"RPLTOPIC");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	std::get<std::string>(chan.set_topic()) = msg[TEXT];
@@ -847,7 +847,7 @@ void Bot::handle_notopic(const Msg &msg)
 {
 	using namespace fmt::NOTOPIC;
 
-	log_handle(msg,"NOTOPIC");
+	log(msg,"NOTOPIC");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	std::get<0>(chan.set_topic()) = {};
@@ -861,7 +861,7 @@ void Bot::handle_kick(const Msg &msg)
 {
 	using namespace fmt::KICK;
 
-	log_handle(msg,"KICK");
+	log(msg,"KICK");
 
 	const auto kicker = msg.get_nick();
 	const auto &kickee = msg.num_params() > 1? msg[KICK::TARGET] : kicker;
@@ -903,7 +903,7 @@ void Bot::handle_privmsg(const Msg &msg)
 {
 	using namespace fmt::PRIVMSG;
 
-	log_handle(msg,"PRIVMSG");
+	log(msg,"PRIVMSG");
 
 	if(msg[SELFNAME] != sess.get_nick())
 	{
@@ -967,7 +967,7 @@ void Bot::handle_notice(const Msg &msg)
 {
 	using namespace fmt::NOTICE;
 
-	log_handle(msg,"NOTICE");
+	log(msg,"NOTICE");
 
 	if(msg.from_server())
 		return;
@@ -1021,7 +1021,7 @@ void Bot::handle_action(const Msg &msg)
 {
 	using namespace fmt::ACTION;
 
-	log_handle(msg,"ACTION");
+	log(msg,"ACTION");
 
 	if(msg[SELFNAME] != sess.get_nick())
 	{
@@ -1065,7 +1065,7 @@ void Bot::handle_invite(const Msg &msg)
 {
 	using namespace fmt::INVITE;
 
-	log_handle(msg,"INVITE");
+	log(msg,"INVITE");
 
 	const Opts &opts = sess.get_opts();
 	if(!opts.get<bool>("invite"))
@@ -1089,7 +1089,7 @@ void Bot::handle_invite(const Msg &msg)
 
 void Bot::handle_ctcp(const Msg &msg)
 {
-	log_handle(msg,"CTCP");
+	log(msg,"CTCP");
 
 	if(!users.has(msg.get_nick()))
 	{
@@ -1108,7 +1108,7 @@ void Bot::handle_namreply(const Msg &msg)
 {
 	using namespace fmt::NAMREPLY;
 
-	log_handle(msg,"NAM REPLY");
+	log(msg,"NAM REPLY");
 
 	const Server &serv = sess.get_server();
 	Chan &chan = chans.add(msg[CHANNAME]);
@@ -1133,7 +1133,7 @@ void Bot::handle_namreply(const Msg &msg)
 
 void Bot::handle_endofnames(const Msg &msg)
 {
-	log_handle(msg,"END OF NAMES");
+	log(msg,"END OF NAMES");
 }
 
 
@@ -1141,25 +1141,25 @@ void Bot::handle_list(const Msg &msg)
 {
 	using namespace fmt::LIST;
 
-	log_handle(msg,"LIST");
+	log(msg,"LIST");
 }
 
 
 void Bot::handle_listend(const Msg &msg)
 {
-	log_handle(msg,"LIST END");
+	log(msg,"LIST END");
 }
 
 
 void Bot::handle_unknownmode(const Msg &msg)
 {
-	log_handle(msg,"UNKNOWN MODE");
+	log(msg,"UNKNOWN MODE");
 }
 
 
 void Bot::handle_bannedfromchan(const Msg &msg)
 {
-	log_handle(msg,"BANNED FROM CHAN");
+	log(msg,"BANNED FROM CHAN");
 }
 
 
@@ -1167,7 +1167,7 @@ void Bot::handle_alreadyonchan(const Msg &msg)
 {
 	using namespace fmt::ALREADYONCHAN;
 
-	log_handle(msg,"ALREADY ON CHAN");
+	log(msg,"ALREADY ON CHAN");
 }
 
 
@@ -1175,7 +1175,7 @@ void Bot::handle_useronchannel(const Msg &msg)
 {
 	using namespace fmt::USERONCHANNEL;
 
-	log_handle(msg,"USER ON CHAN");
+	log(msg,"USER ON CHAN");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	User &user = users.get(msg[NICKNAME]);
@@ -1187,14 +1187,14 @@ void Bot::handle_usernotinchannel(const Msg &msg)
 {
 	using namespace fmt::USERNOTINCHANNEL;
 
-	log_handle(msg,"USERNOTINCHAN");
+	log(msg,"USERNOTINCHAN");
 
 }
 
 
 void Bot::handle_nicknameinuse(const Msg &msg)
 {
-	log_handle(msg,"NICK IN USE");
+	log(msg,"NICK IN USE");
 
 	const Opts &opts = sess.get_opts();
 	if(!opts["ns-acct"].empty() && !opts["ns-pass"].empty())
@@ -1212,14 +1212,14 @@ void Bot::handle_nicknameinuse(const Msg &msg)
 
 void Bot::handle_erroneusnickname(const Msg &msg)
 {
-	log_handle(msg,"ERRONEOUS NICKNAME");
+	log(msg,"ERRONEOUS NICKNAME");
 	quit();
 }
 
 
 void Bot::handle_whoreply(const Msg &msg)
 {
-	log_handle(msg,"WHO REPLY");
+	log(msg,"WHO REPLY");
 
 	const std::string &selfserv = msg.get_nick();
 	const std::string &self = msg[WHOREPLY::SELFNAME];
@@ -1236,7 +1236,7 @@ void Bot::handle_whoreply(const Msg &msg)
 
 void Bot::handle_whospecial(const Msg &msg)
 {
-	log_handle(msg,"WHO SPECIAL");
+	log(msg,"WHO SPECIAL");
 
 	const std::string &server = msg.get_nick();
 	const std::string &self = msg[0];
@@ -1274,7 +1274,7 @@ try
 {
 	using namespace fmt::WHOISUSER;
 
-	log_handle(msg,"WHOIS USER");
+	log(msg,"WHOIS USER");
 
 	User &user = users.get(msg[NICKNAME]);
 	user.set_host(msg[HOSTNAME]);
@@ -1292,7 +1292,7 @@ try
 {
 	using namespace fmt::WHOISIDLE;
 
-	log_handle(msg,"WHOIS IDLE");
+	log(msg,"WHOIS IDLE");
 
 	User &user = users.get(msg[NICKNAME]);
 	user.set_idle(msg.get<time_t>(SECONDS));
@@ -1308,7 +1308,7 @@ catch(const Exception &e)
 
 void Bot::handle_whoisserver(const Msg &msg)
 {
-	log_handle(msg,"WHOIS SERVER");
+	log(msg,"WHOIS SERVER");
 
 }
 
@@ -1318,7 +1318,7 @@ try
 {
 	using namespace fmt::WHOISSECURE;
 
-	log_handle(msg,"WHOIS SECURE");
+	log(msg,"WHOIS SECURE");
 
 	User &user = users.get(msg[NICKNAME]);
 	user.set_secure(true);
@@ -1336,7 +1336,7 @@ try
 {
 	using namespace fmt::WHOISACCOUNT;
 
-	log_handle(msg,"WHOIS ACCOUNT");
+	log(msg,"WHOIS ACCOUNT");
 
 	User &user = users.get(msg[NICKNAME]);
 	user.set_acct(msg[ACCTNAME]);
@@ -1351,21 +1351,21 @@ catch(const Exception &e)
 
 void Bot::handle_whoischannels(const Msg &msg)
 {
-	log_handle(msg,"WHOIS CHANNELS");
+	log(msg,"WHOIS CHANNELS");
 
 }
 
 
 void Bot::handle_endofwhois(const Msg &msg)
 {
-	log_handle(msg,"END OF WHOIS");
+	log(msg,"END OF WHOIS");
 
 }
 
 
 void Bot::handle_whowasuser(const Msg &msg)
 {
-	log_handle(msg,"WHOWAS USER");
+	log(msg,"WHOWAS USER");
 
 }
 
@@ -1374,7 +1374,7 @@ void Bot::handle_monlist(const Msg &msg)
 {
 	using namespace fmt::MONLIST;
 
-	log_handle(msg,"MONLIST");
+	log(msg,"MONLIST");
 
 	const auto nicks = tokens(msg[NICKLIST],",");
 }
@@ -1384,7 +1384,7 @@ void Bot::handle_mononline(const Msg &msg)
 {
 	using namespace fmt::MONONLINE;
 
-	log_handle(msg,"MONONLINE");
+	log(msg,"MONONLINE");
 
 	const auto masks = tokens(msg[MASKLIST],",");
 }
@@ -1394,7 +1394,7 @@ void Bot::handle_monoffline(const Msg &msg)
 {
 	using namespace fmt::MONOFFLINE;
 
-	log_handle(msg,"MONOFFLINE");
+	log(msg,"MONOFFLINE");
 
 	const auto nicks = tokens(msg[NICKLIST],",");
 }
@@ -1402,13 +1402,13 @@ void Bot::handle_monoffline(const Msg &msg)
 
 void Bot::handle_monlistfull(const Msg &msg)
 {
-	log_handle(msg,"MONLISTFULL");
+	log(msg,"MONLISTFULL");
 }
 
 
 void Bot::handle_endofmonlist(const Msg &msg)
 {
-	log_handle(msg,"ENDOFMONLIST");
+	log(msg,"ENDOFMONLIST");
 }
 
 
@@ -1416,7 +1416,7 @@ void Bot::handle_acceptlist(const Msg &msg)
 {
 	using namespace fmt::ACCEPTLIST;
 
-	log_handle(msg,"ACCEPTLIST");
+	log(msg,"ACCEPTLIST");
 }
 
 
@@ -1424,7 +1424,7 @@ void Bot::handle_acceptfull(const Msg &msg)
 {
 	using namespace fmt::ACCEPTFULL;
 
-	log_handle(msg,"ACCEPTFULL");
+	log(msg,"ACCEPTFULL");
 }
 
 
@@ -1432,7 +1432,7 @@ void Bot::handle_acceptexist(const Msg &msg)
 {
 	using namespace fmt::ACCEPTEXIST;
 
-	log_handle(msg,"ACCEPTEXIST");
+	log(msg,"ACCEPTEXIST");
 }
 
 
@@ -1440,13 +1440,13 @@ void Bot::handle_acceptnot(const Msg &msg)
 {
 	using namespace fmt::ACCEPTNOT;
 
-	log_handle(msg,"ACCEPTNOT");
+	log(msg,"ACCEPTNOT");
 }
 
 
 void Bot::handle_endofaccept(const Msg &msg)
 {
-	log_handle(msg,"ENDOFACCEPT");
+	log(msg,"ENDOFACCEPT");
 }
 
 
@@ -1454,7 +1454,7 @@ void Bot::handle_knock(const Msg &msg)
 {
 	using namespace fmt::KNOCK;
 
-	log_handle(msg,"KNOCK");
+	log(msg,"KNOCK");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	events.chan(msg,chan);
@@ -1463,14 +1463,14 @@ void Bot::handle_knock(const Msg &msg)
 
 void Bot::handle_nosuchnick(const Msg &msg)
 {
-	log_handle(msg,"NO SUCH NICK");
+	log(msg,"NO SUCH NICK");
 
 }
 
 
 void Bot::handle_cannotsendtochan(const Msg &msg)
 {
-	log_handle(msg,"CANNOTSENDTOCHAN");
+	log(msg,"CANNOTSENDTOCHAN");
 
 }
 
@@ -1479,7 +1479,7 @@ void Bot::handle_modeislocked(const Msg &msg)
 {
 	using namespace fmt::MODEISLOCKED;
 
-	log_handle(msg,"MODE IS LOCKED");
+	log(msg,"MODE IS LOCKED");
 
 	Chan &chan = chans.get(msg[CHANNAME]);
 	events.chan(msg,chan);
@@ -1559,9 +1559,8 @@ void Bot::state(const State &state)
 }
 
 
-void Bot::log_handle(const Msg &msg,
-                     const std::string &name)
-const
+void Bot::log(const Msg &msg,
+              const std::string &name)
 {
 	const std::string &n = name.empty()? msg.get_name() : name;
 	std::cout << "<< " << std::setw(24) << std::setfill(' ') << std::left << n;
