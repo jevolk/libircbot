@@ -1,4 +1,4 @@
-# 
+#
 #  COPYRIGHT 2014 (C) Jason Volk
 #  COPYRIGHT 2014 (C) Svetlana Tkachenko
 #
@@ -37,6 +37,7 @@ WFLAGS = -pedantic                             \
          -Wmissing-format-attribute            \
          -Wno-unused-parameter                 \
          -Wno-unused-label                     \
+         -Wno-unused-variable                  \
          -Wsuggest-attribute=format
 
 

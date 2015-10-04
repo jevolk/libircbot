@@ -41,9 +41,9 @@ struct Delta : std::tuple<bool,char,Mask>
 	bool operator==(const bool &sign) const         { return std::get<SIGN>(*this) == sign;        }
 	bool operator==(const char &mode) const;        // compares with sign (+/-) or mode char
 
-	explicit operator const Mask&() const           { return std::get<MASK>(*this);                }
 	explicit operator const bool&() const           { return std::get<SIGN>(*this);                }
 	explicit operator const char&() const           { return std::get<MODE>(*this);                }
+	explicit operator Mask() const                  { return std::get<MASK>(*this);                }
 	operator std::string() const;
 
 	Delta(const bool &sign, const char &mode, const Mask &mask);
