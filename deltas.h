@@ -8,7 +8,10 @@
 
 struct Deltas : std::vector<Delta>
 {
-	bool all_signs(const bool &sign) const;
+	bool all(const bool &sign) const;
+	bool all(const char &mode) const;
+	bool all(const Mask &mask) const;
+
 	bool too_many(const Server &s) const        { return size() > s.isupport.get_or_max("MODES");  }
 	void validate_chan(const Server &s) const;
 	void validate_user(const Server &s) const;
@@ -111,6 +114,42 @@ const
 
 	for(const Delta &delta : *this)
 		delta.validate_chan(s);
+}
+
+
+inline
+bool Deltas::all(const bool &sign)
+const
+{
+	return std::all_of(begin(),end(),[&sign]
+	(const Delta &d)
+	{
+		return std::get<Delta::SIGN>(d) == sign;
+	});
+}
+
+
+inline
+bool Deltas::all(const char &mode)
+const
+{
+	return std::all_of(begin(),end(),[&mode]
+	(const Delta &d)
+	{
+		return std::get<Delta::MODE>(d) == mode;
+	});
+}
+
+
+inline
+bool Deltas::all(const Mask &mask)
+const
+{
+	return std::all_of(begin(),end(),[&mask]
+	(const Delta &d)
+	{
+		return std::get<Delta::MASK>(d) == mask;
+	});
 }
 
 
