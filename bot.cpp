@@ -372,10 +372,9 @@ void Bot::handle_pck(const boost::system::error_code &e,
 	if(size <= 2)
 		return;
 
+	const std::lock_guard<Bot> lock(*this);
 	std::istream stream(buf.get());
 	const Msg msg(stream);
-
-	const std::lock_guard<Bot> lock(*this);
 	events.msg(msg);
 	set_handle(buf);
 }
