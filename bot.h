@@ -64,6 +64,7 @@ namespace colors
 #include "isupport.h"
 #include "server.h"
 #include "delta.h"
+#include "deltas.h"
 #include "mode.h"
 #include "ban.h"
 #include "flags.h"
