@@ -130,11 +130,8 @@ void NickServ::handle_listchans(const Capture &msg)
 inline
 void NickServ::handle_identified(const Capture &capture)
 {
-	Sess &sess = get_sess();
+	Sess &sess(get_sess());
 	sess.set(IDENTIFIED);
-	events.state(State::ACTIVE,State::ACTIVE);
-	chans.autojoin();
-	listchans();
 }
 
 

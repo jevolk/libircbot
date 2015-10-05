@@ -97,6 +97,9 @@ void Bot::init_state_handlers()
 	if(opts.has("registration"))
 		ENTER(State::REGISTERING, enter_state_registering)
 
+	if(opts.has("ns-acct") && opts.has("ns-pass"))
+		ENTER(State::IDENTIFYING, enter_state_identifying)
+
 	ENTER(State::ACTIVE, enter_state_active)
 	ENTER(handler::MISS, enter_state_unhandled)
 
@@ -441,21 +444,24 @@ void Bot::enter_state_registering(const State &st)
 	const Cork cork(sess);
 	Quote(sess,"NICK") << sess.get_nick();
 	Quote(sess,"USER") << username << " unknown unknown :" << gecos;
+
+	if(opts.has("umode"))
+		Quote(sess,"MODE") << sess.get_nick() << " " << opts["umode"];
+}
+
+
+void Bot::enter_state_identifying(const State &st)
+{
+	log(st,"Entered IDENTIFYING");
+
+	ns.identify(opts["ns-acct"],opts["ns-pass"]);
+	ns.listchans();
 }
 
 
 void Bot::enter_state_active(const State &st)
 {
 	log(st,"Entered ACTIVE");
-
-	if(opts.has("umode"))
-		Quote(sess,"MODE") << sess.get_nick() << " " << opts["umode"];
-
-	if(!opts["ns-acct"].empty() && !opts["ns-pass"].empty())
-	{
-		ns.identify(opts["ns-acct"],opts["ns-pass"]);
-		return;
-	}
 
 	chans.autojoin();
 }
@@ -490,7 +496,7 @@ void Bot::handle_http(const Msg &msg)
 		return;
 	}
 
-	sess.set(PROXIED);
+	sess.set(Flag::PROXIED);
 	state_next();
 }
 
@@ -509,8 +515,11 @@ void Bot::handle_welcome(const Msg &msg)
 {
 	log(msg,"WELCOME");
 
-	sess.set(Flag::REGISTERED);
-	state(State::ACTIVE);
+	if(!sess.is(Flag::WELCOMED))
+	{
+		sess.set(Flag::WELCOMED);
+		state_next();
+	}
 }
 
 
@@ -1110,6 +1119,13 @@ void Bot::handle_notice(const Msg &msg)
 	if(msg.from("nickserv"))
 	{
 		ns.handle(msg);
+
+		if(sess.is(State::IDENTIFYING) && sess.is(Flag::IDENTIFIED))
+		{
+			state_next();
+			return;
+		}
+
 		return;
 	}
 

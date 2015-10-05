@@ -11,7 +11,7 @@ enum Flag : uint16_t
 	CONNECTED          = 0x0001,         // TCP handshake complete
 	PROXIED            = 0x0002,         // If proxying, got 200 OK
 	NEGOTIATED         = 0x0004,         // CAP registration has ended
-	REGISTERED         = 0x0008,         // USER/ircd registration taken place
+	WELCOMED           = 0x0008,         // USER/ircd registration taken place
 	IDENTIFIED         = 0x0010,         // NickServ identification confirmed
 
 	// Faults
@@ -34,7 +34,8 @@ enum class State : int8_t
 	PROXYING           = 2,              // If proxying, sent a CONNECT, awaiting response
 	NEGOTIATING        = 3,              // CAP registration is open and has not ended
 	REGISTERING        = 4,              // USER/ircd registration in progress
-	ACTIVE             = 5,              // Normal handling of IRC events
+	IDENTIFYING        = 5,              // Services identification in progress
+	ACTIVE             = 6,              // Normal handling of IRC events
 };
 
 

@@ -229,6 +229,7 @@ struct Bot : public std::mutex
 	// Session state handlers
 	void enter_state_unhandled(const State &s);
 	void enter_state_active(const State &s);
+	void enter_state_identifying(const State &s);
 	void enter_state_registering(const State &s);
 	void leave_state_negotiating(const State &s);
 	void enter_state_negotiating(const State &s);
