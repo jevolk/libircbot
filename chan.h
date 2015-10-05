@@ -21,6 +21,7 @@ using Lambdas = std::forward_list<Lambda>;
 Type type(const char &c);
 std::string nick_prefix(const Server &serv, const std::string &nick);
 std::string gen_cs_cmd(const std::string &chan, const Delta &delta);
+std::string gen_cs_cmd(const std::string &chan, const Deltas &delta);
 
 
 class Chan : public Locutor,
@@ -628,9 +629,19 @@ void Chan::operator()(const Delta &delta)
 inline
 void Chan::csdo(const Deltas &deltas)
 {
-	for(const auto &delta : deltas)
-		if(!csdo(delta))
-			opdo(delta);
+	const auto cmd(gen_cs_cmd(get_name(),deltas));
+	if(cmd.empty())
+	{
+		for(const auto &delta : deltas)
+			if(!csdo(delta))
+				opdo(delta);
+
+		return;
+	}
+
+	Service &cs(get_cs());
+	cs << cmd << flush;
+	cs.terminator_errors();
 }
 
 
@@ -796,14 +807,50 @@ std::ostream &operator<<(std::ostream &s,
 }
 
 
+/**
+ * This only works if this vector shares the same signs and modes. If so, we can simply
+ * append the different masks to the chanserv command. If modes or signs differ, this
+ * function also returns an empty string. If gen_cs_cmd() does not work either,
+ * returns an empty string.
+ */
+inline
+std::string gen_cs_cmd(const std::string &chan,
+                       const Deltas &deltas)
+try
+{
+	using std::get;
+
+	std::stringstream s;
+	const auto &sign(get<Delta::SIGN>(deltas.at(0)));
+	const auto &mode(get<Delta::MODE>(deltas.at(0)));
+	if(!deltas.all(sign) || !deltas.all(mode))
+		return s.str();
+
+	s << gen_cs_cmd(chan,deltas.at(0));
+	if(s.tellp() == 0)
+		return s.str();
+
+	for(auto it(std::next(deltas.begin())); it != deltas.end(); ++it)
+		s << " " << std::get<Delta::MASK>(*it);
+
+	return s.str();
+}
+catch(const std::out_of_range &e)
+{
+	return std::string();
+}
+
+
 inline
 std::string gen_cs_cmd(const std::string &chan,
                        const Delta &delta)
 {
+	using std::get;
+
 	std::stringstream s;
-	const auto &mask(std::get<Delta::MASK>(delta));
-	const auto &sign(std::get<Delta::SIGN>(delta));
-	const auto &mode(std::get<Delta::MODE>(delta));
+	const auto &mask(get<Delta::MASK>(delta));
+	const auto &sign(get<Delta::SIGN>(delta));
+	const auto &mode(get<Delta::MODE>(delta));
 
 	switch(mode)
 	{
