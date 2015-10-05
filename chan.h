@@ -15,9 +15,12 @@ enum Type
 
 using Info = std::map<std::string, std::string>;
 using Topic = std::tuple<std::string, Mask, time_t>;
+using Lambda = std::function<void (Chan &)>;
+using Lambdas = std::forward_list<Lambda>;
 
 Type type(const char &c);
 std::string nick_prefix(const Server &serv, const std::string &nick);
+std::string gen_cs_cmd(const std::string &chan, const Delta &delta);
 
 
 class Chan : public Locutor,
@@ -32,7 +35,8 @@ class Chan : public Locutor,
 	std::string pass;                                       // passkey for channel
 	Topic _topic;                                           // Topic state
 	Info info;                                              // ChanServ info response
-	OpDo opq;                                               // Queue of things to do when op'ed
+	Deltas opdo_deltas;                                     // OpDo Delta queue
+	Lambdas opdo_lambdas;                                   // OpDo Lambda queue
 
   public:
 	Users users;                                            // Users container direct interface
@@ -46,16 +50,19 @@ class Chan : public Locutor,
 	auto &get_pass() const                                  { return pass;                          }
 	auto &get_topic() const                                 { return _topic;                        }
 	auto &get_info() const                                  { return info;                          }
-	auto &get_opq() const                                   { return opq;                           }
-
+	auto &get_opdo_deltas() const                           { return opdo_deltas;                   }
+	auto &get_opdo_lambdas() const                          { return opdo_lambdas;                  }
 	bool has_mode(const char &mode) const                   { return get_mode().has(mode);          }
+
+	// Convenience checks for ourself
+	bool is_flag(const char &flag) const;
 	bool is_voice() const;
 	bool is_op() const;
 
   protected:
 	auto &get_cs()                                          { return *chanserv;                     }
 
-	void run_opdo();
+	bool run_opdo();
 	void fetch_oplists();
 	void event_opped();                                     // We have been opped up
 
@@ -65,7 +72,15 @@ class Chan : public Locutor,
 	void set_info(const decltype(info) &info)               { this->info = info;                    }
 	auto &set_topic()                                       { return _topic;                        }
 	bool set_mode(const Delta &d);
-	template<class F> bool opdo(F&& f);                     // sudo <something as op> (happens async)
+
+	// [SEND] Execution interface
+	bool opdo(const Lambda &lambda);                        // sudo <something as op> (happens async)
+	bool opdo(const Delta &delta);                          // sudo delta execution as op (happens async)
+	bool opdo(const Deltas &deltas);                        // sudo deltas execution as op (happens async)
+	bool csdo(const Delta &delta);                          // fed to chanserv (must have +r) (false if not avail)
+	void csdo(const Deltas &deltas);                        // fed to chanserv (must have +r) (opdo if not avail)
+	void operator()(const Deltas &deltas);                  // best possible deltas execution (cs or op)
+	void operator()(const Delta &delta);                    // best possible deltas execution (cs or op)
 
 	// [SEND] State update interface
 	void who(const std::string &fl = User::WHO_FORMAT);     // Update state of users in channel (goes into Users->User)
@@ -85,24 +100,10 @@ class Chan : public Locutor,
 	void akick_del(const User &user);
 	void akick(const Mask &mask, const std::string &ts = "", const std::string &reason = "");
 	void akick(const User &user, const std::string &ts = "", const std::string &reason = "");
-	void csunquiet(const Mask &mask);
-	void csunquiet(const User &user);
-	void csquiet(const Mask &user);
-	void csquiet(const User &user);
-	void csdevoice(const User &user);
-	void csvoice(const User &user);
-	void csdeop(const User &user);
-	void csop(const User &user);
 	void recover();                                         // recovery procedure
 	void unban();                                           // unban self
-	void csdevoice();                                       // target is self
-	void csdeop();                                          // target is self
-	void devoice();                                         // target is self
-	void voice();                                           // target is self
-	void deop();                                            // target is self
-	void op();                                              // target is self
 
-	// [SEND] Direct interface to channel
+	// [SEND] Main interface to channel
 	void knock(const std::string &msg = "");
 	void invite(const std::string &nick);
 	void topic(const std::string &topic);
@@ -116,6 +117,11 @@ class Chan : public Locutor,
 	Delta voice(const User &user);
 	Delta deop(const User &user);
 	Delta op(const User &user);
+	void devoice();                                         // target is self
+	void voice();                                           // target is self
+	void deop();                                            // target is self
+	void op();                                              // target is self
+
 	void part();                                            // Leave channel
 	void join();                                            // Enter channel
 
@@ -197,10 +203,38 @@ void Chan::part()
 
 
 inline
+void Chan::op()
+{
+	csdo(Delta("+o",get_my_nick()));
+}
+
+
+inline
+void Chan::deop()
+{
+	mode(Delta("-o",get_my_nick()));
+}
+
+
+inline
+void Chan::voice()
+{
+	operator()(Delta("+v",get_my_nick()));
+}
+
+
+inline
+void Chan::devoice()
+{
+	operator()(Delta("-v",get_my_nick()));
+}
+
+
+inline
 Delta Chan::op(const User &u)
 {
-	const Delta d = u.op();
-	opdo(d);
+	const Delta d(u.op());
+	operator()(d);
 	return d;
 }
 
@@ -208,8 +242,8 @@ Delta Chan::op(const User &u)
 inline
 Delta Chan::deop(const User &u)
 {
-	const Delta d = u.deop();
-	opdo(d);
+	const Delta d(u.deop());
+	operator()(d);
 	return d;
 }
 
@@ -217,8 +251,8 @@ Delta Chan::deop(const User &u)
 inline
 Delta Chan::voice(const User &u)
 {
-	Delta d = u.voice();
-	opdo(d);
+	const Delta d(u.voice());
+	operator()(d);
 	return d;
 }
 
@@ -226,8 +260,8 @@ Delta Chan::voice(const User &u)
 inline
 Delta Chan::devoice(const User &u)
 {
-	Delta d = u.devoice();
-	opdo(d);
+	const Delta d(u.devoice());
+	operator()(d);
 	return d;
 }
 
@@ -241,7 +275,7 @@ Deltas Chan::ban(const User &u)
 	if(u.is_logged_in())
 		d.emplace_back(u.ban(Mask::ACCT));
 
-	opdo(d);
+	operator()(d);
 	return d;
 }
 
@@ -260,7 +294,7 @@ Deltas Chan::unban(const User &u)
 	if(u.is_logged_in() && lists.bans.count(u.mask(Mask::ACCT)))
 		d.emplace_back(u.unban(Mask::ACCT));
 
-	opdo(d);
+	operator()(d);
 	return d;
 }
 
@@ -274,7 +308,7 @@ Deltas Chan::quiet(const User &u)
 	if(u.is_logged_in())
 		d.emplace_back(u.quiet(Mask::ACCT));
 
-	opdo(d);
+	operator()(d);
 	return d;
 }
 
@@ -293,7 +327,7 @@ Deltas Chan::unquiet(const User &u)
 	if(u.is_logged_in() && lists.quiets.count(u.mask(Mask::ACCT)))
 		d.emplace_back(u.unquiet(Mask::ACCT));
 
-	opdo(d);
+	operator()(d);
 	return d;
 }
 
@@ -302,7 +336,7 @@ inline
 void Chan::remove(const User &user,
                   const std::string &reason)
 {
-	const auto &nick = user.get_nick();
+	const auto &nick(user.get_nick());
 	opdo([nick,reason](Chan &chan)
 	{
 		Quote(chan.get_sess(),"REMOVE") << chan.get_name() << " "  << nick << " :" << reason;
@@ -314,7 +348,7 @@ inline
 void Chan::kick(const User &user,
                 const std::string &reason)
 {
-	const auto &nick = user.get_nick();
+	const auto &nick(user.get_nick());
 	opdo([nick,reason](Chan &chan)
 	{
 		Quote(chan.get_sess(),"KICK") << chan.get_name() << " "  << nick << " :" << reason;
@@ -326,10 +360,10 @@ inline
 void Chan::invite(const std::string &nick)
 {
 
-	const auto func = [nick](Chan &chan)
+	const auto func([nick](Chan &chan)
 	{
 		Quote(chan.get_sess(),"INVITE") << nick << " " << chan.get_name();
-	};
+	});
 
 	if(has_mode('g'))
 		func(*this);
@@ -341,6 +375,14 @@ void Chan::invite(const std::string &nick)
 inline
 void Chan::topic(const std::string &text)
 {
+	if(is_flag('t'))
+	{
+		Service &cs(get_cs());
+		cs << "TOPIC " << get_name() << " " << text << flush;
+		cs.terminator_errors();
+		return;
+	}
+
 	opdo([text](Chan &chan)
 	{
 		Quote out(chan.get_sess(),"TOPIC");
@@ -360,59 +402,9 @@ void Chan::knock(const std::string &msg)
 
 
 inline
-void Chan::op()
-{
-	Service &cs = get_cs();
-	cs << "OP " << get_name() << " " << get_my_nick() << flush;
-	cs.terminator_errors();
-}
-
-
-inline
-void Chan::deop()
-{
-	mode(Delta("-o",get_my_nick()));
-}
-
-
-inline
-void Chan::voice()
-{
-	Service &cs = get_cs();
-	cs << "VOICE " << get_name() << " " << get_my_nick() << flush;
-	cs.terminator_errors();
-}
-
-
-inline
-void Chan::devoice()
-{
-	opdo(Delta("-v",get_my_nick()));
-}
-
-
-inline
-void Chan::csdeop()
-{
-	Service &cs = get_cs();
-	cs << "DEOP " << get_name() << " " << get_my_nick() << flush;
-	cs.terminator_errors();
-}
-
-
-inline
-void Chan::csdevoice()
-{
-	Service &cs = get_cs();
-	cs << "DEVOICE " << get_name() << " " << get_my_nick() << flush;
-	cs.terminator_errors();
-}
-
-
-inline
 void Chan::unban()
 {
-	Service &cs = get_cs();
+	Service &cs(get_cs());
 	cs << "UNBAN " << get_name() << flush;
 	cs.terminator_errors();
 }
@@ -421,82 +413,8 @@ void Chan::unban()
 inline
 void Chan::recover()
 {
-	Service &cs = get_cs();
+	Service &cs(get_cs());
 	cs << "RECOVER " << get_name() << flush;
-	cs.terminator_errors();
-}
-
-
-inline
-void Chan::csop(const User &user)
-{
-	Service &cs = get_cs();
-	cs << "OP " << get_name() << " " << user.get_nick() << flush;
-	cs.terminator_errors();
-}
-
-
-inline
-void Chan::csdeop(const User &user)
-{
-	Service &cs = get_cs();
-	cs << "DEOP " << get_name() << " " << user.get_nick() << flush;
-	cs.terminator_errors();
-}
-
-
-inline
-void Chan::csvoice(const User &user)
-{
-	Service &cs = get_cs();
-	cs << "VOICE " << get_name() << " " << user.get_nick() << flush;
-	cs.terminator_errors();
-}
-
-
-inline
-void Chan::csdevoice(const User &user)
-{
-	Service &cs = get_cs();
-	cs << "DEVOICE " << get_name() << " " << user.get_nick() << flush;
-	cs.terminator_errors();
-}
-
-
-inline
-void Chan::csquiet(const User &user)
-{
-	csquiet(user.mask(Mask::HOST));
-
-//	if(user.is_logged_in())
-//		csquiet(user.get_acct());
-}
-
-
-inline
-void Chan::csunquiet(const User &user)
-{
-	csunquiet(user.mask(Mask::HOST));
-
-//	if(user.is_logged_in())
-//		csunquiet(user.get_acct());
-}
-
-
-inline
-void Chan::csquiet(const Mask &mask)
-{
-	Service &cs = get_cs();
-	cs << "QUIET " << get_name() << " " << mask << flush;
-	cs.terminator_errors();
-}
-
-
-inline
-void Chan::csunquiet(const Mask &mask)
-{
-	Service &cs = get_cs();
-	cs << "UNQUIET " << get_name() << " " << mask << flush;
 	cs.terminator_errors();
 }
 
@@ -518,7 +436,7 @@ void Chan::akick(const Mask &mask,
                  const std::string &ts,
                  const std::string &reason)
 {
-	Service &cs = get_cs();
+	Service &cs(get_cs());
 	cs << "AKICK " << get_name() << " ADD " << mask;
 
 	if(!ts.empty())
@@ -535,7 +453,7 @@ void Chan::akick(const Mask &mask,
 inline
 void Chan::akick_del(const Mask &mask)
 {
-	Service &cs = get_cs();
+	Service &cs(get_cs());
 	cs << "AKICK " << get_name() << " DEL " << mask << flush;
 	cs.terminator_any();
 }
@@ -544,7 +462,7 @@ void Chan::akick_del(const Mask &mask)
 inline
 void Chan::csclear(const Mode &mode)
 {
-	Service &cs = get_cs();
+	Service &cs(get_cs());
 	cs << "clear " << get_name() << " BANS " << mode << flush;
 	cs.terminator_any();
 }
@@ -553,7 +471,7 @@ void Chan::csclear(const Mode &mode)
 inline
 void Chan::csinfo()
 {
-	Service &cs = get_cs();
+	Service &cs(get_cs());
 	cs << "info " << get_name() << flush;
 	cs.terminator_next("*** End of Info ***");
 }
@@ -570,8 +488,8 @@ void Chan::names()
 inline
 void Chan::banlist()
 {
-	const auto &sess = get_sess();
-	const auto &serv = sess.get_server();
+	const auto &sess(get_sess());
+	const auto &serv(sess.get_server());
 	if(serv.chan_pmodes.find('b') == std::string::npos)
 		return;
 
@@ -582,8 +500,8 @@ void Chan::banlist()
 inline
 void Chan::quietlist()
 {
-	const auto &sess = get_sess();
-	const auto &serv = sess.get_server();
+	const auto &sess(get_sess());
+	const auto &serv(sess.get_server());
 	if(serv.chan_pmodes.find('q') == std::string::npos)
 		return;
 
@@ -594,8 +512,8 @@ void Chan::quietlist()
 inline
 void Chan::exceptlist()
 {
-	const auto &sess = get_sess();
-	const auto &isup = sess.get_isupport();
+	const auto &sess(get_sess());
+	const auto &isup(sess.get_isupport());
 	mode(std::string("+") + isup.get("EXCEPTS",'e'));
 }
 
@@ -603,8 +521,8 @@ void Chan::exceptlist()
 inline
 void Chan::invitelist()
 {
-	const auto &sess = get_sess();
-	const auto &isup = sess.get_isupport();
+	const auto &sess(get_sess());
+	const auto &isup(sess.get_isupport());
 	mode(std::string("+") + isup.get("INVEX",'I'));
 }
 
@@ -612,7 +530,7 @@ void Chan::invitelist()
 inline
 void Chan::flagslist()
 {
-	Service &cs = get_cs();
+	Service &cs(get_cs());
 	cs << "flags " << get_name() << flush;
 
 	std::stringstream ss;
@@ -624,7 +542,7 @@ void Chan::flagslist()
 inline
 void Chan::accesslist()
 {
-	Service &cs = get_cs();
+	Service &cs(get_cs());
 	cs << "access " << get_name() << " list" << flush;
 
 	std::stringstream ss;
@@ -636,7 +554,7 @@ void Chan::accesslist()
 inline
 void Chan::akicklist()
 {
-	Service &cs = get_cs();
+	Service &cs(get_cs());
 	cs << "akick " << get_name() << " list" << flush;
 
 	// This is the best we can do right now
@@ -658,9 +576,9 @@ inline
 bool Chan::set_mode(const Delta &delta)
 try
 {
-	const auto &mask = std::get<Delta::MASK>(delta);
-	const auto &sign = std::get<Delta::SIGN>(delta);
-	const auto &mode = std::get<Delta::MODE>(delta);
+	const auto &mask(std::get<Delta::MASK>(delta));
+	const auto &sign(std::get<Delta::SIGN>(delta));
+	const auto &mode(std::get<Delta::MODE>(delta));
 
 	// Mode is for channel (TODO: special arguments)
 	if(mask.empty())
@@ -672,10 +590,10 @@ try
 	// Target is a straight nickname, not a Mask
 	if(mask == Mask::INVALID)
 	{
+		users.mode(mask) += delta;
 		if(mask == get_my_nick() && sign && mode == 'o')
 			event_opped();
 
-		users.mode(mask) += delta;
 		return true;
 	}
 
@@ -692,28 +610,86 @@ catch(const Exception &e)
 }
 
 
-template<class F>
-bool Chan::opdo(F&& f)
+inline
+void Chan::operator()(const Deltas &deltas)
 {
-	if(!is_op() && opq.empty())
-		op();
+	csdo(deltas);
+}
 
-	opq(std::forward<F>(f));
 
-	if(!is_op())
+inline
+void Chan::operator()(const Delta &delta)
+{
+	if(!csdo(delta))
+		opdo(delta);
+}
+
+
+inline
+void Chan::csdo(const Deltas &deltas)
+{
+	for(const auto &delta : deltas)
+		if(!csdo(delta))
+			opdo(delta);
+}
+
+
+inline
+bool Chan::csdo(const Delta &delta)
+{
+	using std::get;
+
+	const auto cmd(gen_cs_cmd(get_name(),delta));
+	if(cmd.empty())
 		return false;
 
-	run_opdo();
+	Service &cs(get_cs());
+	cs << cmd << flush;
+	cs.terminator_errors();
 	return true;
+}
+
+
+inline
+bool Chan::opdo(const Deltas &deltas)
+{
+	if(opdo_deltas.empty() && opdo_lambdas.empty())
+		op();
+
+	opdo_deltas.insert(opdo_deltas.end(),deltas.begin(),deltas.end());
+	return run_opdo();
+}
+
+
+inline
+bool Chan::opdo(const Delta &delta)
+{
+	if(opdo_deltas.empty() && opdo_lambdas.empty())
+		op();
+
+	opdo_deltas.emplace_back(delta);
+	return run_opdo();
+}
+
+
+inline
+bool Chan::opdo(const Lambda &lambda)
+{
+	if(opdo_deltas.empty() && opdo_lambdas.empty())
+		op();
+
+	opdo_lambdas.emplace_front(lambda);
+	return run_opdo();
 }
 
 
 inline
 void Chan::event_opped()
 {
-	const Sess &sess = get_sess();
-	const Opts &opts = sess.get_opts();
-	if(opq.empty() && opts.get<bool>("chan-fetch-lists"))
+	const Sess &sess(get_sess());
+	const Opts &opts(sess.get_opts());
+	const auto opq_empty(opdo_deltas.empty() && opdo_lambdas.empty());
+	if(opq_empty && opts.get<bool>("chan-fetch-lists"))
 		fetch_oplists();
 
 	run_opdo();
@@ -723,7 +699,7 @@ void Chan::event_opped()
 inline
 void Chan::fetch_oplists()
 {
-	const Sess &sess = get_sess();
+	const Sess &sess(get_sess());
 
 	if(sess.isupport("INVEX"))
 		invitelist();
@@ -740,14 +716,18 @@ void Chan::fetch_oplists()
 
 
 inline
-void Chan::run_opdo()
+bool Chan::run_opdo()
 {
+	if(!is_op())
+		return false;
+
 	const scope clear([&]
 	{
-		opq.clear();
+		opdo_deltas.clear();
+		opdo_lambdas.clear();
 	});
 
-	for(const auto &lambda : opq.get_lambdas()) try
+	for(const auto &lambda : opdo_lambdas) try
 	{
 		lambda(*this);
 	}
@@ -756,14 +736,23 @@ void Chan::run_opdo()
 		std::cerr << "Chan::run_opdo() lambda exception: " << e << std::endl;
 	}
 
-	auto &deltas = opq.get_deltas();
+	const auto &sess(get_sess());
+	const auto &acct(sess.get_acct());
+	if(!acct.empty() && lists.has_flag(acct) && !is_flag('O'))
+		opdo_deltas.emplace_back("-o",get_my_nick());
 
-	const auto &sess = get_sess();
-	const auto &acct = sess.get_acct();
-	if(!acct.empty() && lists.has_flag(acct) && !lists.has_flag(acct,'O'))
-		deltas.emplace_back("-o",get_my_nick());
+	mode(opdo_deltas);
+	return true;
+}
 
-	mode(deltas);
+
+inline
+bool Chan::is_flag(const char &flag)
+const
+{
+	const auto &sess(get_sess());
+	const auto &acct(sess.get_acct());
+	return lists.has_flag(acct,flag);
 }
 
 
@@ -771,8 +760,7 @@ inline
 bool Chan::is_voice()
 const
 {
-	const auto &mode = users.mode(get_my_nick());
-	return mode.has('v');
+	return users.mode(get_my_nick()).has('v');
 }
 
 
@@ -780,8 +768,7 @@ inline
 bool Chan::is_op()
 const
 {
-	const auto &mode = users.mode(get_my_nick());
-	return mode.has('o');
+	return users.mode(get_my_nick()).has('o');
 }
 
 
@@ -808,6 +795,27 @@ std::ostream &operator<<(std::ostream &s,
 	return s;
 }
 
+
+inline
+std::string gen_cs_cmd(const std::string &chan,
+                       const Delta &delta)
+{
+	std::stringstream s;
+	const auto &mask(std::get<Delta::MASK>(delta));
+	const auto &sign(std::get<Delta::SIGN>(delta));
+	const auto &mode(std::get<Delta::MODE>(delta));
+
+	switch(mode)
+	{
+		case 'o':     s << (sign? "OP"     : "DEOP"     );     break;
+		case 'v':     s << (sign? "VOICE"  : "DEVOICE"  );     break;
+		case 'q':     s << (sign? "QUIET"  : "UNQUIET"  );     break;
+		default:      return s.str();
+	}
+
+	s << " " << chan << " " << mask;
+	return s.str();
+}
 
 
 inline

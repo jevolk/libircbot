@@ -99,7 +99,6 @@ namespace recvq
 namespace chan
 {
 	class Chan;
-	#include "chan_events.h"
 	#include "chan_lists.h"
 	#include "chan_users.h"
 	#include "chan.h"
