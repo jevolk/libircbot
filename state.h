@@ -26,7 +26,7 @@ enum Flag : uint16_t
 };
 
 
-enum class State : int8_t
+enum class State : int
 {
 	FAULT              = -1,             // Handling of exceptional events
 	INACTIVE           = 0,              // The session is inactive or was terminated

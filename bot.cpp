@@ -315,7 +315,6 @@ void Bot::handle_socket_ecb(const boost::system::error_code &e)
 	auto &sock = sess.get_socket();
 	sess.set_current_exception();
 	sess.set(Flag::SOCKERR);
-	sock.purge();
 	state(State::FAULT);
 }
 
@@ -398,8 +397,13 @@ void Bot::enter_state_fault(const State &st)
 {
 	log(st,"Entered FAULT");
 
-	if(sess.is(Flag::TIMEOUT))
-		disconnect();
+	auto &sock(sess.get_socket());
+	sock.disconnect(false);
+	sock.clear();
+	sock.purge();
+
+	cancel_timer(true);
+	recvq::interrupt();
 }
 
 
@@ -490,7 +494,6 @@ void Bot::handle_http(const Msg &msg)
 
 	if(msg[CODE] != "200")
 	{
-		sess.get_socket().disconnect();
 		state(State::FAULT);
 		return;
 	}
@@ -1657,7 +1660,7 @@ void Bot::state(const State &state)
 	sess.post([&,state,this]
 	{
 		const std::lock_guard<Bot> lock(*this);
-		const auto last = sess.get_state();
+		const auto last(sess.get_state());
 		sess.set(state);
 		events.state_leave(last,last);
 		events.state(state,state);
