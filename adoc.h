@@ -43,7 +43,7 @@ struct Adoc : public boost::property_tree::ptree
 inline
 Adoc::Adoc(const std::string &str)
 try:
-boost::property_tree::ptree([&str]
+boost::property_tree::ptree([str]
 {
 	std::stringstream ss(str);
 	boost::property_tree::ptree ret;
