@@ -69,6 +69,7 @@ try
 		"invalid parameters",
 		"is not registered",
 		"is not online",
+		"unchanged",
 	};
 
 	static const auto ignores =

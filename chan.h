@@ -101,6 +101,8 @@ class Chan : public Locutor,
 	void akick_del(const User &user);
 	void akick(const Mask &mask, const std::string &ts = "", const std::string &reason = "");
 	void akick(const User &user, const std::string &ts = "", const std::string &reason = "");
+	void flags(const User &user, const Deltas &deltas);
+	void flags(const User &user, const Delta &delta)        { flags(user,Deltas{delta});            }
 	void recover();                                         // recovery procedure
 	void unban();                                           // unban self
 
@@ -460,6 +462,22 @@ void Chan::akick_del(const Mask &mask)
 	Service &cs(get_cs());
 	cs << "AKICK " << get_name() << " DEL " << mask << flush;
 	cs.terminator_any();
+}
+
+
+inline
+void Chan::flags(const User &user,
+                 const Deltas &deltas)
+{
+	if(!user.is_logged_in())
+		throw Assertive("Can't set flags on user: not logged in");
+
+	Service &cs(get_cs());
+	cs << "FLAGS " << get_name() << " " << user.get_acct() << " " << deltas << flush;
+
+	std::stringstream terminator;
+	terminator << "Flags " << deltas << " were set on " << user.get_acct() << " in " << get_name();
+	cs.terminator_next(terminator.str());
 }
 
 
