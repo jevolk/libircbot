@@ -110,7 +110,7 @@ inline
 Chan *Chans::find_cnotice(const User &user)
 {
 	Chan *ret = nullptr;
-	any_of([&](Chan &chan)
+	any_of([&ret,&user](Chan &chan)
 	{
 		if(!chan.is_op() || !chan.users.has(user))
 			return false;
