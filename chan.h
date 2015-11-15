@@ -311,7 +311,7 @@ Deltas Chan::quiet(const User &u)
 	if(u.is_logged_in())
 		d.emplace_back(u.quiet(Mask::ACCT));
 
-	if(users.mode(u).has('v'))
+	if(users.has(u) && users.mode(u).has('v'))
 		d.emplace_back(u.devoice());
 
 	operator()(d);
