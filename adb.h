@@ -43,8 +43,8 @@ ldb(!dir.empty()? std::make_unique<decltype(ldb)::element_type>(dir) : nullptr)
 inline
 Adoc Adb::get(const std::string &name)
 {
-	const auto it = ldb->find(name);
-	return it? Adoc{it->second} : throw Exception("Account not found");
+	const auto it(ldb->find(name));
+	return it? Adoc{std::string{it->second}} : throw Exception("Account not found");
 }
 
 
@@ -52,8 +52,8 @@ inline
 Adoc Adb::get(const std::string &name)
 const
 {
-	const auto it = ldb->find(name);
-	return it? Adoc{it->second} : throw Exception("Account not found");
+	const auto it(ldb->find(name));
+	return it? Adoc{std::string{it->second}} : throw Exception("Account not found");
 }
 
 
@@ -63,7 +63,7 @@ Adoc Adb::get(const std::nothrow_t,
 noexcept
 {
 	const auto it = ldb->find(name);
-	return it? Adoc{it->second} : Adoc{};
+	return it? Adoc{std::string{it->second}} : Adoc{};
 }
 
 
@@ -73,5 +73,5 @@ Adoc Adb::get(const std::nothrow_t,
 const noexcept
 {
 	const auto it = ldb->find(name);
-	return it? Adoc{it->second} : Adoc{};
+	return it? Adoc{std::string{it->second}} : Adoc{};
 }
