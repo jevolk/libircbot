@@ -685,7 +685,7 @@ bool Chan::csdo(const Delta &delta)
 inline
 bool Chan::opdo(const Deltas &deltas)
 {
-	if(opdo_deltas.empty() && opdo_lambdas.empty())
+	if(!is_op() && opdo_deltas.empty() && opdo_lambdas.empty())
 		op();
 
 	opdo_deltas.insert(opdo_deltas.end(),deltas.begin(),deltas.end());
@@ -696,7 +696,7 @@ bool Chan::opdo(const Deltas &deltas)
 inline
 bool Chan::opdo(const Delta &delta)
 {
-	if(opdo_deltas.empty() && opdo_lambdas.empty())
+	if(!is_op() && opdo_deltas.empty() && opdo_lambdas.empty())
 		op();
 
 	opdo_deltas.emplace_back(delta);
@@ -707,7 +707,7 @@ bool Chan::opdo(const Delta &delta)
 inline
 bool Chan::opdo(const Lambda &lambda)
 {
-	if(opdo_deltas.empty() && opdo_lambdas.empty())
+	if(!is_op() && opdo_deltas.empty() && opdo_lambdas.empty())
 		op();
 
 	opdo_lambdas.emplace_front(lambda);
