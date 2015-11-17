@@ -50,11 +50,11 @@ bool Lists::set_mode(const Delta &d)
 {
 	switch(char(d))
 	{
-		case 'b':     return d == '+'? bans.emplace(Mask(d)).second:
-		                               bans.erase(Mask(d));
+		case 'b':     return bool(d)? bans.emplace(Mask(d)).second:
+		                              bans.erase(Mask(d));
 
-		case 'q':     return d == '+'? quiets.emplace(Mask(d)).second:
-		                               quiets.erase(Mask(d));
+		case 'q':     return bool(d)? quiets.emplace(Mask(d)).second:
+		                              quiets.erase(Mask(d));
 
 		default:      return false;
 	}
