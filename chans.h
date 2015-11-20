@@ -109,14 +109,17 @@ Chan &Chans::add(const std::string &name)
 inline
 Chan *Chans::find_cnotice(const User &user)
 {
-	Chan *ret = nullptr;
+	Chan *ret(nullptr);
 	any_of([&ret,&user](Chan &chan)
+	mutable
 	{
-		if(!chan.is_op() || !chan.users.has(user))
-			return false;
+		if(chan.is_op() && chan.users.has(user))
+		{
+			ret = &chan;
+			return true;
+		}
 
-		ret = &chan;
-		return true;
+		return false;
 	});
 
 	return ret;
