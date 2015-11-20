@@ -92,7 +92,7 @@ try
 }
 catch(const std::out_of_range &e)
 {
-	throw Exception() << "Unrecognized channel name [" << name << "]";
+	throw Exception() << "Unrecognized channel name: I am not in this channel";
 }
 
 
