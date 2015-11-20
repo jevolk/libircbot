@@ -88,7 +88,7 @@ inline
 Chan &Chans::get(const std::string &name)
 try
 {
-	return chans.at(name);
+	return chans.at(tolower(name));
 }
 catch(const std::out_of_range &e)
 {
