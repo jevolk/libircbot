@@ -305,6 +305,33 @@ time_t secs_cast(const std::string &dur)
 
 
 inline
+std::string secs_cast(const time_t &t)
+{
+	std::stringstream ret;
+
+	const time_t minutes   { t / (60L)                   };
+	const time_t hours     { t / (60L * 60L)             };
+	const time_t days      { t / (60L * 60L * 24L)       };
+	const time_t weeks     { t / (60L * 60L * 24L * 7L)  };
+
+	if(weeks >= 1)
+		ret << weeks << " weeks";
+	else if(days >= 1)
+		ret << days << " days";
+	else if(hours >= 1)
+		ret << hours << " hours";
+	else if(minutes >= 1)
+		ret << minutes << " minutes";
+	else if(t >= 1)
+		ret << t << " seconds";
+	else
+		ret << "now";
+
+	return ret.str();
+}
+
+
+inline
 std::string packetize(std::string &&str,
                       const size_t &max = 390)
 {
