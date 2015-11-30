@@ -5,11 +5,9 @@
 #  DISTRIBUTED UNDER THE GNU GENERAL PUBLIC LICENSE (GPL) (see: LICENSE)
 #
 
-TARGET = libircbot.a
-
 CC = g++
 VERSTR = $(shell git describe --tags)
-CCFLAGS += -std=c++14 -Istldb -DIRCBOT_VERSION=\"$(VERSTR)\" -fstack-protector
+CCFLAGS += -std=c++14 -Istldb -DIRCBOT_VERSION=\"$(VERSTR)\" -fstack-protector -fPIC
 WFLAGS = -pedantic                             \
          -Wall                                 \
          -Wextra                               \
@@ -41,12 +39,16 @@ WFLAGS = -pedantic                             \
          -Wsuggest-attribute=format
 
 
-all: $(TARGET)
+all: libircbot.a
 
 
-$(TARGET): sendq.o recvq.o bot.o
+libircbot.a: sendq.o recvq.o bot.o
 	ar rc $@ $^
 	ranlib $@
+
+libircbot.so: sendq.o recvq.o bot.o
+	$(CC) -o $@ $(CCFLAGS) -shared $(WFLAGS) $<
+
 
 recvq.o: recvq.cpp *.h
 	$(CC) -c -o $@ $(CCFLAGS) $(WFLAGS) $<
@@ -59,4 +61,4 @@ bot.o: bot.cpp *.h
 
 
 clean:
-	rm -f *.o *.a
+	rm -f *.o *.a *.so
