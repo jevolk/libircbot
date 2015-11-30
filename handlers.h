@@ -35,6 +35,7 @@ class Handlers
 
 	void clear(const std::string &event)                { handlers.erase(event);             }
 	void clear(const Special &special)                  { specials[special].clear();         }
+	void clear(const Prio &prio);                       // clears handlers by priority num
 	void clear_handlers()                               { handlers.clear();                  }
 	void clear_specials();                              // clears all Special handlers
 	void clear();                                       // clears everything
@@ -54,6 +55,23 @@ void Handlers<Handler>::clear_specials()
 {
 	for(auto &s : specials)
 		s.clear();
+}
+
+
+template<class Handler>
+void Handlers<Handler>::clear(const Prio &prio)
+{
+	for(auto it(handlers.begin()); it != handlers.end(); )
+		if(it->second.get_prio() == prio)
+			handlers.erase(it++);
+		else
+			++it;
+
+	for(auto &spec : specials)
+		spec.remove_if([&prio](const Handler &handler)
+		{
+			return handler.get_prio() == prio;
+		});
 }
 
 
