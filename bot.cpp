@@ -785,20 +785,14 @@ void Bot::handle_mode(const Msg &msg)
 	for(const Delta &d : deltas) try
 	{
 		chan.set_mode(d);
+		events.chan(msg,chan);
 
-		// Channel's own mode
-		if(std::get<Delta::MASK>(d).empty())
-		{
-			events.chan(msg,chan);
-			continue;
-		}
-
-		// Target is a straight nickname
+		// Target is a straight nickname, we find the user in this case
+		// TODO: find the user based on other matches?
 		if(std::get<Delta::MASK>(d) == Mask::INVALID)
 		{
 			User &user = users.get(std::get<Delta::MASK>(d));
 			events.chan_user(msg,chan,user);
-			continue;
 		}
 	}
 	catch(const std::exception &e)
