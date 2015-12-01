@@ -167,9 +167,12 @@ struct Bot : public std::mutex
 	void handle_exceptlist(const Msg &m);
 	void handle_quietlist(const Msg &m);
 	void handle_banlist(const Msg &m);
-	void handle_cnotice(const Msg &m);
-	void handle_caction(const Msg &m);
-	void handle_chanmsg(const Msg &m);
+	void handle_chan_privmsg(const Msg &m);
+	void handle_chan_notice(const Msg &m);
+	void handle_chan_action(const Msg &m);
+	void handle_privmsg(const Msg &m);
+	void handle_notice(const Msg &m);
+	void handle_action(const Msg &m);
 	void handle_knock(const Msg &m);
 	void handle_notopic(const Msg &m);
 	void handle_rpltopic(const Msg &m);
@@ -203,9 +206,6 @@ struct Bot : public std::mutex
 	void handle_whospecial(const Msg &m);
 	void handle_whoreply(const Msg &m);
 	void handle_umodeis(const Msg &m);
-	void handle_notice(const Msg &m);
-	void handle_privmsg(const Msg &m);
-	void handle_action(const Msg &m);
 	void handle_invite(const Msg &m);
 	void handle_umode(const Msg &m);
 	void handle_ison(const Msg &m);

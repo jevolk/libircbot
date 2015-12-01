@@ -19,7 +19,7 @@ class ChanServ : public Service
 	void handle_set_flags(Chan &chan, const std::string &flags, const Mask &targ);
 
   public:
-	void handle_cnotice(const Msg &msg, Chan &chan);
+	void handle_chan_notice(const Msg &msg, Chan &chan);
 	void handle(const Msg &msg);
 
 	ChanServ(Adb &adb, Sess &sess, Chans &chans):
@@ -56,12 +56,12 @@ void ChanServ::captured(const Capture &msg)
 
 
 inline
-void ChanServ::handle_cnotice(const Msg &msg,
-                              Chan &chan)
+void ChanServ::handle_chan_notice(const Msg &msg,
+                                  Chan &chan)
 {
-	using namespace fmt::CNOTICE;
+	using namespace fmt::NOTICE;
 
-	const auto toks = tokens(decolor(msg[TEXT]));
+	const auto toks(tokens(decolor(msg[TEXT])));
 	if(toks.size() == 6 && toks.at(1) == "set" && toks.at(2) == "flags")
 		handle_set_flags(chan,toks.at(3),chomp(toks.at(5),"."));
 }

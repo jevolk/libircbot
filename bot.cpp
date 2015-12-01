@@ -1023,16 +1023,6 @@ void Bot::handle_kick(const Msg &msg)
 }
 
 
-void Bot::handle_chanmsg(const Msg &msg)
-{
-	using namespace fmt::CHANMSG;
-
-	User &user = users.get(msg.get_nick());
-	Chan &chan = chans.get(msg[CHANNAME]);
-	events.chan_user(msg,chan,user);
-}
-
-
 void Bot::handle_privmsg(const Msg &msg)
 {
 	using namespace fmt::PRIVMSG;
@@ -1041,7 +1031,7 @@ void Bot::handle_privmsg(const Msg &msg)
 
 	if(msg[SELFNAME] != sess.get_nick())
 	{
-		handle_chanmsg(msg);
+		handle_chan_privmsg(msg);
 		return;
 	}
 
@@ -1060,39 +1050,20 @@ void Bot::handle_privmsg(const Msg &msg)
 		return;
 	}
 
-	User &user = users.get(msg.get_nick());
+	User &user(users.get(msg.get_nick()));
 	events.user(msg,user);
 }
 
 
-void Bot::handle_cnotice(const Msg &msg)
+void Bot::handle_chan_privmsg(const Msg &msg)
 {
-	using namespace fmt::CNOTICE;
+	using namespace fmt::PRIVMSG;
 
-	if(msg[CHANNAME] == "$$*")
-	{
-		chans.for_each([&]
-		(Chan &chan)
-		{
-			chan << msg[TEXT] << Chan::flush;
-			events.chan(msg,chan);
-		});
-
-		return;
-	}
-
-	const Server &serv = sess.get_server();
-	const bool wch_prefix = serv.has_prefix(msg[CHANNAME].at(0));
-	const auto chname = wch_prefix? msg[CHANNAME].substr(1) : msg[CHANNAME];
-	Chan &chan = chans.get(chname);
-
-	if(msg.from("chanserv"))
-	{
-		cs.handle_cnotice(msg,chan);
-		return;
-	}
-
-	User &user = users.get(msg.get_nick());
+	const auto &serv(sess.get_server());
+	const auto has_prefix(serv.has_prefix(msg[SELFNAME].at(0)));
+	const auto &chan_name(has_prefix? msg[SELFNAME].substr(1) : msg[SELFNAME]);
+	auto &chan(chans.get(chan_name));
+	auto &user(users.get(msg.get_nick()));
 	events.chan_user(msg,chan,user);
 }
 
@@ -1108,7 +1079,7 @@ void Bot::handle_notice(const Msg &msg)
 
 	if(msg[SELFNAME] != sess.get_nick())
 	{
-		handle_cnotice(msg);
+		handle_chan_notice(msg);
 		return;
 	}
 
@@ -1139,22 +1110,39 @@ void Bot::handle_notice(const Msg &msg)
 		return;
 	}
 
-	User &user = users.get(msg.get_nick());
+	auto &user(users.get(msg.get_nick()));
 	events.user(msg,user);
 }
 
 
-void Bot::handle_caction(const Msg &msg)
+void Bot::handle_chan_notice(const Msg &msg)
 {
-	using namespace fmt::CACTION;
+	using namespace fmt::NOTICE;
 
-	User &user = users.get(msg.get_nick());
-	Chan &chan = chans.get(msg[CHANNAME]);
+	if(msg[SELFNAME] == "$$*")
+	{
+		chans.for_each([&](Chan &chan)
+		{
+			chan << msg[TEXT] << chan.flush;
+			events.chan(msg,chan);
+		});
+
+		return;
+	}
+
+	const auto &serv(sess.get_server());
+	const auto has_prefix(serv.has_prefix(msg[SELFNAME].at(0)));
+	const auto &chan_name(has_prefix? msg[SELFNAME].substr(1) : msg[SELFNAME]);
+	auto &chan(chans.get(chan_name));
+
+	if(msg.from("chanserv"))
+	{
+		cs.handle_chan_notice(msg,chan);
+		return;
+	}
+
+	auto &user(users.get(msg.get_nick()));
 	events.chan_user(msg,chan,user);
-
-	//TODO: Move down
-	if(!msg[TEXT].empty() && user.is_owner())
-		handle_caction_owner(msg,chan,user);
 }
 
 
@@ -1166,7 +1154,7 @@ void Bot::handle_action(const Msg &msg)
 
 	if(msg[SELFNAME] != sess.get_nick())
 	{
-		handle_caction(msg);
+		handle_chan_action(msg);
 		return;
 	}
 
@@ -1178,8 +1166,25 @@ void Bot::handle_action(const Msg &msg)
 		return;
 	}
 
-	User &user = users.get(msg.get_nick());
+	auto &user(users.get(msg.get_nick()));
 	events.user(msg,user);
+}
+
+
+void Bot::handle_chan_action(const Msg &msg)
+{
+	using namespace fmt::ACTION;
+
+	const auto &serv(sess.get_server());
+	const auto has_prefix(serv.has_prefix(msg[SELFNAME].at(0)));
+	const auto &chan_name(has_prefix? msg[SELFNAME].substr(1) : msg[SELFNAME]);
+	auto &chan(chans.get(chan_name));
+	auto &user(users.get(msg.get_nick()));
+	events.chan_user(msg,chan,user);
+
+	//TODO: Move down
+	if(!msg[TEXT].empty() && user.is_owner())
+		handle_caction_owner(msg,chan,user);
 }
 
 
@@ -1187,7 +1192,7 @@ void Bot::handle_caction_owner(const Msg &msg,
                                Chan &chan,
                                User &user)
 {
-	using namespace fmt::CACTION;
+	using namespace fmt::ACTION;
 
 	const auto tok = tokens(msg[TEXT]);
 	switch(hash(tolower(tok.at(0))))
