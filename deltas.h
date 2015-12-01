@@ -12,7 +12,7 @@ struct Deltas : std::vector<Delta>
 	bool all(const char &mode) const;
 	bool all(const Mask &mask) const;
 
-	bool too_many(const Server &s) const        { return size() > s.isupport.get_or_max("MODES");  }
+	bool too_many(const Server &s) const         { return size() > s.isupport.get_or_max("MODES"); }
 	void validate_chan(const Server &s) const;
 	void validate_user(const Server &s) const;
 
@@ -21,7 +21,8 @@ struct Deltas : std::vector<Delta>
 
 	template<class... T> Deltas &operator<<(T&&... t);
 	Deltas &set_signs(const bool &sign);
-	Deltas &inv_signs();
+	Deltas operator~() const &;                  // invert the signs
+	Deltas operator~() &&;                       // invert the signs
 
 	Deltas() = default;
 	Deltas(std::vector<Delta> &&vec):       std::vector<Delta>(std::move(vec)) {}
@@ -66,12 +67,25 @@ catch(const std::out_of_range &e)
 
 
 inline
-Deltas &Deltas::inv_signs()
+Deltas Deltas::operator~()
+&&
 {
 	for(auto &d : *this)
 		std::get<Delta::SIGN>(d) =! std::get<Delta::SIGN>(d);
 
-	return *this;
+	return std::move(*this);
+}
+
+
+inline
+Deltas Deltas::operator~()
+const &
+{
+	Deltas ret(*this);
+	for(auto &d : ret)
+		std::get<Delta::SIGN>(d) =! std::get<Delta::SIGN>(d);
+
+	return ret;
 }
 
 
