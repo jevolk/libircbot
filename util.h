@@ -177,7 +177,7 @@ bool endswith_any(const std::string &str,
 inline
 void tokens(const std::string &str,
             const char *const &sep,
-            const std::function<void (const std::string &)> &func)
+            const std::function<void (std::string)> &func)
 {
 	using delim = boost::char_separator<char>;
 
@@ -231,9 +231,9 @@ void parse_args(const It &begin,
                 const It &end,
                 const std::string &keyed,   //  = "--",
                 const std::string &valued,  //  = "=",
-                const std::function<void (const std::pair<std::string,std::string> &kv)> &func)
+                const std::function<void (std::pair<std::string,std::string>)> &func)
 {
-	std::for_each(begin,end,[&,keyed,valued,func]
+	std::for_each(begin,end,[&keyed,&valued,&func]
 	(const auto &token)
 	{
 		if(is_arg(token,keyed))
@@ -247,10 +247,10 @@ void parse_args(const std::string &str,
                 const std::string &keyed,   //  = "--"
                 const std::string &valued,  //  = "="
                 const std::string &toksep,  //  = " "
-                const std::function<void (const std::pair<std::string,std::string> &kv)> &func)
+                const std::function<void (std::pair<std::string,std::string>)> &func)
 {
-	tokens(str,toksep.c_str(),[&,keyed,valued,func]
-	(const std::string &token)
+	tokens(str,toksep.c_str(),[&keyed,&valued,&func]
+	(const auto &token)
 	{
 		if(is_arg(token,keyed))
 			func(split(token.substr(keyed.size()),valued));
