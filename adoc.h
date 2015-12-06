@@ -35,9 +35,22 @@ struct Adoc : public boost::property_tree::ptree
 	Adoc(const std::string &str = "{}");
 	Adoc(boost::property_tree::ptree &&p):               boost::property_tree::ptree(std::move(p)) {}
 	Adoc(const boost::property_tree::ptree &p):          boost::property_tree::ptree(p) {}
+	template<class It> Adoc(It&& begin, It&& end);
 
 	friend std::ostream &operator<<(std::ostream &s, const Adoc &adoc);
 };
+
+
+template<class It>
+Adoc::Adoc(It&& beg,
+           It&& end)
+{
+	std::for_each(beg,end,[this]
+	(const auto &val)
+	{
+		this->push(val);
+	});
+}
 
 
 inline
