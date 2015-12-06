@@ -72,6 +72,7 @@ namespace colors
 #include "adoc.h"
 #include "msg.h"
 #include "state.h"
+#include "stream.h"
 namespace handler
 {
 	#include "handler.h"
@@ -79,7 +80,6 @@ namespace handler
 }
 #include "adb.h"
 #include "acct.h"
-#include "stream.h"
 namespace sendq
 {
 	#include "sendq.h"

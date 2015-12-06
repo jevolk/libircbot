@@ -52,7 +52,6 @@ func(func),
 flags(flags),
 prio(prio)
 {
-
 }
 
 
@@ -66,12 +65,15 @@ const try
 catch(const Internal &e)
 {
 	std::cerr << "HANDLER INTERNAL: \033[1;45;37m" << e << "\033[0m" << std::endl;
+	Stream::clear();
 }
 catch(const Interrupted &)
 {
+	Stream::clear();
 	throw;
 }
 catch(const std::exception &e)
 {
 	std::cerr << "UNHANDLED: \033[1;41;37m" << e.what() << "\033[0m" << std::endl;
+	Stream::clear();
 }

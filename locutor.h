@@ -60,6 +60,7 @@ class Locutor : public Stream
 	bool operator>(const std::string &o) const          { return tolower(target) > tolower(o);       }
 
 	void set_target(const std::string &target)          { this->target = target;                     }
+	void reset();
 
   protected:
 	auto &get_sess()                                    { return *sess;                              }
@@ -188,11 +189,9 @@ Locutor &Locutor::operator<<(const MethodEx &methex)
 inline
 Locutor &Locutor::operator<<(const flush_t)
 {
-	const scope reset([&]
+	const scope reset([this]
 	{
-		clear();
-		meth = DEFAULT_METHOD;
-		methex = DEFAULT_METHODEX;
+		this->reset();
 	});
 
 	switch(meth)
@@ -245,4 +244,13 @@ void Locutor::msg(const char *const &cmd)
 			break;
 		}
 	}
+}
+
+
+inline
+void Locutor::reset()
+{
+	clear();
+	meth = DEFAULT_METHOD;
+	methex = DEFAULT_METHODEX;
 }

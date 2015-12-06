@@ -21,7 +21,7 @@ class Stream
 	auto &get_sbuf()                                    { return sbuf;                         }
 
   public:
-	void clear();                                       // clear all in sbuf
+	static void clear();                                // clear all in sbuf
 
 	virtual Stream &operator<<(const flush_t) = 0;
 	Stream &operator()(const std::string &str);         // flush automatically
