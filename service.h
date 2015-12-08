@@ -70,6 +70,7 @@ try
 		"is not registered",
 		"is not online",
 		"unchanged",
+		"no bans found",
 	};
 
 	static const auto ignores =

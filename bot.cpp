@@ -1306,6 +1306,14 @@ void Bot::handle_unknownmode(const Msg &msg)
 void Bot::handle_bannedfromchan(const Msg &msg)
 {
 	log(msg,"BANNED FROM CHAN");
+
+	using namespace fmt::BANNEDFROMCHAN;
+
+	Chan &chan(chans.get(msg[CHANNAME]));
+	events.chan(msg,chan);
+
+	if(chan.get_val<bool>("config.event.err_bannedfromchan.unban"))
+		chan.unban();
 }
 
 

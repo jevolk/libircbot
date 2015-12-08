@@ -10,6 +10,7 @@ class ChanServ : public Service
 {
 	Chans &chans;
 
+	void handle_unbanned(const Capture &capture);
 	void handle_akicklist(const Capture &capture);
 	void handle_flagslist(const Capture &capture);
 	void handle_info(const Capture &capture);
@@ -43,13 +44,15 @@ void ChanServ::handle(const Msg &msg)
 inline
 void ChanServ::captured(const Capture &msg)
 {
-	const auto &header = msg.front();
+	const auto &header(msg.front());
 	if(header.find("Information on") == 0)
 		handle_info(msg);
 	else if(header.find("Entry") == 0)
 		handle_flagslist(msg);
 	else if(header.find("AKICK") == 0)
 		handle_akicklist(msg);
+	else if(header.find("Unbanned") == 0)
+		handle_unbanned(msg);
 	else
 		throw Exception("Unhandled ChanServ capture.");
 }
@@ -154,6 +157,23 @@ void ChanServ::handle_akicklist(const Capture &msg)
 	}
 
 	chan.lists.akicks = akicks;
+}
+
+
+inline
+void ChanServ::handle_unbanned(const Capture &msg)
+{
+	const auto it(msg.begin());
+	const auto toks(tokens(*it));
+	const auto &nickname(toks.at(1));
+	const auto &channame(toks.at(3));
+
+	const Sess &sess(get_sess());
+	if(tolower(nickname) != tolower(sess.get_nick()))
+		return;
+
+	Chan &chan(chans.get(channame));
+	chan.join();
 }
 
 

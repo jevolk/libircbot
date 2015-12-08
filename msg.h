@@ -39,6 +39,7 @@ SPQF_FMT( NICKNAMEINUSE,     ASTERISK, NICKNAME, REASON                         
 SPQF_FMT( USERNOTINCHANNEL,  SELFNAME, NICKNAME, CHANNAME, REASON                                            )
 SPQF_FMT( USERONCHANNEL,     SELFNAME, NICKNAME, CHANNAME, REASON                                            )
 SPQF_FMT( ALREADYONCHAN,     SELFNAME, CHANNAME, REASON                                                      )
+SPQF_FMT( BANNEDFROMCHAN,    SELFNAME, CHANNAME, REASON                                                      )
 SPQF_FMT( KICK,              CHANNAME, TARGET,   REASON                                                      )
 SPQF_FMT( PRIVMSG,           SELFNAME, TEXT                                                                  )
 SPQF_FMT( ACTION,            SELFNAME, TEXT                                                                  )

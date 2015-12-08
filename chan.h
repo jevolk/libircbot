@@ -421,7 +421,7 @@ void Chan::unban()
 {
 	Service &cs(get_cs());
 	cs << "UNBAN " << get_name() << flush;
-	cs.terminator_errors();
+	cs.terminator_next("Unbanned");
 }
 
 
