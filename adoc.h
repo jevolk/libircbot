@@ -19,7 +19,7 @@ struct Adoc : public boost::property_tree::ptree
 
 	// Array document utils
 	template<class C> C into() const;
-	template<class C> C into(const C &) const            { return into<C>();                        }
+	template<class C, class It> auto into(C &c, It&& i) const;
 
 	template<class T> Adoc &push(const T &val) &;
 	template<class I> Adoc &push(const I &beg, const I &end) &;
@@ -176,13 +176,22 @@ C Adoc::into()
 const
 {
 	C ret;
-	std::transform(begin(),end(),std::inserter(ret,ret.begin()),[]
+	into(ret,ret.begin());
+	return ret;
+}
+
+
+template<class C,
+         class It>
+auto Adoc::into(C &c,
+                It&& i)
+const
+{
+	return std::transform(begin(),end(),std::inserter(c,i),[]
 	(const auto &p)
 	{
 		return p.second.get<typename C::value_type>("");
 	});
-
-	return ret;
 }
 
 
