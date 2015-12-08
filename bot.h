@@ -235,6 +235,7 @@ struct Bot : public std::mutex
 	void enter_state_negotiating(const State &s);
 	void enter_state_proxying(const State &s);
 	void enter_state_connecting(const State &s);
+	void enter_state_inactive(const State &s);
 	void enter_state_fault(const State &s);
 
 	// IO Service handlers

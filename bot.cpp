@@ -101,6 +101,7 @@ void Bot::init_state_handlers()
 		ENTER(State::IDENTIFYING, enter_state_identifying)
 
 	ENTER(State::ACTIVE, enter_state_active)
+	ENTER(State::INACTIVE, enter_state_inactive)
 	ENTER(handler::MISS, enter_state_unhandled)
 
 	#undef LEAVE
@@ -403,7 +404,13 @@ void Bot::enter_state_fault(const State &st)
 	sock.purge();
 
 	cancel_timer(true);
-	recvq::interrupt();
+}
+
+
+void Bot::enter_state_inactive(const State &st)
+{
+	log(st,"Entered INACTIVE");
+
 }
 
 
@@ -634,7 +641,7 @@ void Bot::handle_quit(const Msg &msg)
 	// We have quit
 	if(msg.get_nick() == sess.get_nick())
 	{
-		state(State::INACTIVE);
+		disconnect();
 		return;
 	}
 
