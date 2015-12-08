@@ -96,16 +96,23 @@ Adoc &Adoc::merge(const Adoc &src)
 	{
 		for(const auto &pair : src)
 		{
-			const auto &key = pair.first;
-			const auto &sub = pair.second;
+			const auto &key(pair.first);
+			const auto &sub(pair.second);
 
 			if(!sub.empty())
 			{
-				Adoc child = dst.get_child(key,Adoc());
+				Adoc child(dst.get_child(key,Adoc()));
 				recurse(sub,child);
-				dst.put_child(key,child);
+
+				if(key.empty())
+					dst.push(child);
+				else
+					dst.put_child(key,child);
 			}
-			else dst.put_child(key,sub);
+			else if(key.empty())
+				dst.push(sub.get("",std::string()));
+			else
+				dst.put_child(key,sub);
 		}
 	};
 
@@ -118,18 +125,18 @@ inline
 bool Adoc::remove(const std::string &key)
 &
 {
-	const size_t pos = key.rfind(".");
+	const auto pos(key.rfind("."));
 	if(pos == std::string::npos)
 		return erase(key);
 
-	const std::string path = key.substr(0,pos);
-	const std::string skey = key.substr(pos+1);
+	const auto path(key.substr(0,pos));
+	const auto skey(key.substr(pos+1));
 
 	if(skey.empty())
 		erase(path);
 
-	auto &doc = get_child(path);
-	const bool ret = doc.erase(skey);
+	auto &doc(get_child(path));
+	const auto ret(doc.erase(skey));
 
 	if(doc.empty())
 		erase(path);
@@ -200,8 +207,8 @@ const
 	{
 		for(const auto &pair : doc)
 		{
-			const auto &key = pair.first;
-			const auto &sub = pair.second;
+			const auto &key(pair.first);
+			const auto &sub(pair.second);
 			func(key,doc);
 			re(sub);
 		}
