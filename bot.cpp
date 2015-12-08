@@ -744,9 +744,32 @@ void Bot::handle_part(const Msg &msg)
 
 	log(msg,"PART");
 
-	User &user = users.get(msg.get_nick());
-	Chan &chan = chans.get(msg[CHANNAME]);
+	User &user(users.get(msg.get_nick()));
+	Chan &chan(chans.get(msg[CHANNAME]));
 	events.chan_user(msg,chan,user);
+
+	if(user.is_myself())
+	{
+		if(chan.get_val<bool>("config.event.part.rejoin"))
+		{
+			// We have parted and rejoin = 1, so always rejoin
+			chans.del(msg[CHANNAME]);
+			chans.join(msg[CHANNAME]);
+			return;
+		}
+
+		const auto toks(tokens(msg[REASON]));
+		const bool req(toks.size() >= 3 && toks.at(0) == "requested" && toks.at(1) == "by");
+		if(req && chan.get_val<bool>("config.event.part.rejoin_removed"))
+		{
+			// Rejoin when we have been force removed
+			const auto &remover(toks.at(2));
+			const auto &reason(between(detok(toks.begin()+3,toks.end())));
+			chans.del(msg[CHANNAME]);
+			chans.join(msg[CHANNAME]);
+			return;
+		}
+	}
 
 	if(chan.users.del(user))
 		user.dec_chans();
@@ -997,23 +1020,21 @@ void Bot::handle_kick(const Msg &msg)
 
 	log(msg,"KICK");
 
-	const auto kicker = msg.get_nick();
-	const auto &kickee = msg.num_params() > 1? msg[KICK::TARGET] : kicker;
+	const auto &kicker(msg.get_nick());
+	const auto &kickee(msg.num_params() > 1? msg[KICK::TARGET] : kicker);
+	Chan &chan(chans.get(msg[CHANNAME]));
+	User &user(users.get(kickee));
 
-	if(sess.get_nick() == kickee)
+	events.chan_user(msg,chan,user);
+	events.chan(msg,chan);
+
+	if(sess.get_nick() == kickee && chan.get_val<bool>("config.event.kick.rejoin"))
 	{
-		//TODO: move down
-		//We have been kicked
+		// We have been kicked and rejoin = 1
 		chans.del(msg[CHANNAME]);
 		chans.join(msg[CHANNAME]);
 		return;
 	}
-
-	User &user = users.get(kickee);
-	Chan &chan = chans.get(msg[CHANNAME]);
-
-	events.chan_user(msg,chan,user);
-	events.chan(msg,chan);
 
 	if(chan.users.del(user))
 		user.dec_chans();
