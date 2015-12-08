@@ -189,7 +189,7 @@ inline
 bool Mode::any(const Mode &m)
 const
 {
-	return std::any_of(m.begin(),m.end(),[&]
+	return std::any_of(m.begin(),m.end(),[this]
 	(const char &c)
 	{
 		return has(c);
@@ -201,7 +201,7 @@ inline
 bool Mode::all(const Mode &m)
 const
 {
-	return std::all_of(m.begin(),m.end(),[&]
+	return std::all_of(m.begin(),m.end(),[this]
 	(const char &c)
 	{
 		return has(c);
@@ -213,7 +213,7 @@ inline
 bool Mode::none(const Mode &m)
 const
 {
-	return std::none_of(m.begin(),m.end(),[&]
+	return std::none_of(m.begin(),m.end(),[this]
 	(const char &c)
 	{
 		return has(c);
