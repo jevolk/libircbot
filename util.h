@@ -75,7 +75,7 @@ template<class R,
 R pointers(C&& c)
 {
 	R ret;
-	std::transform(c.begin(),c.end(),std::inserter(ret,ret.end()),[]
+	std::transform(std::begin(c),std::end(c),std::inserter(ret,std::end(ret)),[]
 	(typename C::iterator::value_type &t)
 	{
 		return &t;
@@ -89,7 +89,7 @@ template<class I>
 bool isnumeric(const I &beg,
                const I &end)
 {
-	return std::all_of(beg,end,[&]
+	return std::all_of(beg,end,[]
 	(auto&& c)
 	{
 		return std::isdigit(c,locale);
@@ -101,7 +101,7 @@ template<class I>
 bool isalpha(const I &beg,
              const I &end)
 {
-	return std::all_of(beg,end,[&]
+	return std::all_of(beg,end,[]
 	(auto&& c)
 	{
 		return std::isalpha(c,locale);
@@ -109,17 +109,49 @@ bool isalpha(const I &beg,
 }
 
 
+template<class I,
+         class T>
+bool isspec(const I &beg,
+            const I &end,
+            const std::set<T> &spec)
+{
+	return std::all_of(beg,end,[&spec]
+	(auto&& c)
+	{
+		return spec.count(c);
+	});
+}
+
+
+template<class I>
+bool isspec(const I &beg,
+            const I &end,
+            const std::string &spec)
+{
+	return isspec(beg,end,std::set<char>(std::begin(spec),std::end(spec)));
+}
+
+
 template<class T>
 bool isalpha(const T &val)
 {
-	return isalpha(val.begin(),val.end());
+	return isalpha(std::begin(val),std::end(val));
 }
 
 
 template<class T>
 bool isnumeric(const T &val)
 {
-	return isnumeric(val.begin(),val.end());
+	return isnumeric(std::begin(val),std::end(val));
+}
+
+
+template<class T,
+         class S>
+bool isspec(const T &val,
+            const S &spec)
+{
+	return isspec(std::begin(val),std::end(val),spec);
 }
 
 
@@ -127,7 +159,7 @@ inline
 std::string chomp(const std::string &str,
                   const std::string &c = " ")
 {
-	const auto pos = str.find_last_not_of(c);
+	const auto pos(str.find_last_not_of(c));
 	return pos == std::string::npos? str : str.substr(0,pos+1);
 }
 
@@ -136,7 +168,7 @@ inline
 std::pair<std::string, std::string> split(const std::string &str,
                                           const std::string &delim = " ")
 {
-	const auto pos = str.find(delim);
+	const auto pos(str.find(delim));
 	return pos == std::string::npos?
 	              std::make_pair(str,std::string()):
 	              std::make_pair(str.substr(0,pos), str.substr(pos+delim.size()));
@@ -156,7 +188,7 @@ inline
 bool endswith(const std::string &str,
               const std::string &val)
 {
-	const auto pos = str.find(val);
+	const auto pos(str.find(val));
 	return pos != std::string::npos && pos == str.size() - val.size();
 }
 
@@ -183,7 +215,7 @@ void tokens(const std::string &str,
 
 	const delim d(sep);
 	const boost::tokenizer<delim> tk(str,d);
-	std::for_each(tk.begin(),tk.end(),func);
+	std::for_each(std::begin(tk),std::end(tk),func);
 }
 
 
@@ -198,7 +230,7 @@ C<T,A> tokens(const std::string &str,
 
 	const delim d(sep);
 	const boost::tokenizer<delim> tk(str,d);
-	return {tk.begin(),tk.end()};
+	return {std::begin(tk),std::end(tk)};
 }
 
 
@@ -252,9 +284,74 @@ void parse_args(const std::string &str,
 	tokens(str,toksep.c_str(),[&keyed,&valued,&func]
 	(const auto &token)
 	{
-		if(is_arg(token,keyed))
-			func(split(token.substr(keyed.size()),valued));
+		parse_args(&token,&token+1,keyed,valued,func);
 	});
+}
+
+
+template<class It,
+         class Func>
+void parse_opargs(const It &begin,
+                  const It &end,
+                  const std::string &keyed,                //  = "--"
+                  const std::vector<std::string> &ops,     //  = { "=", "!=", "<", ... } MUST BE SORTED BY LENGTH
+                  Func&& func)                             // void (string key, string op, string val)
+{
+	std::for_each(begin,end,[&keyed,&ops,&func]
+	(const auto &token)
+	{
+		if(!is_arg(token,keyed))
+			return;
+
+		const auto &kov(token.substr(keyed.size()));
+		for(const auto &op : ops)
+		{
+			if(op.empty())
+			{
+				func(kov,op,std::string());
+				break;
+			}
+			else if(kov.find(op) != std::string::npos)
+			{
+				const auto &kv(split(kov,op));
+				func(kv.first,op,kv.second);
+				break;
+			}
+		}
+	});
+}
+
+
+template<class Func>
+void parse_opargs(const std::string &str,
+                  const std::string &keyed,                //  = "--"
+                  const std::vector<std::string> &ops,     //  = { "=", "!=", "<", ... } MUST BE SORTED BY LENGTH
+                  const std::string &toksep,               //  = " "
+                  Func&& func)                             // void (string key, string op, string val)
+{
+	tokens(str,toksep.c_str(),[&keyed,&ops,&func]
+	(const auto &token)
+	{
+		parse_opargs(&token,&token+1,keyed,ops,std::forward<Func>(func));
+	});
+}
+
+
+template<class Func>
+void parse_args(const std::string &str,
+                const std::string &keyed,                  //  = "--"
+                std::vector<std::string> ops,              //  = { "=", "!=", "<", ... }
+                const std::string &toksep,                 //  = " "
+                Func&& func)                               // void (string key, string op, string val)
+{
+	// ops are sorted from longest to shortest, longest being the hardest to match.
+	std::sort(std::begin(ops),std::end(ops),[]
+	(const auto &a, const auto &b)
+	{
+		return a.size() > b.size();
+	});
+
+	parse_opargs(str,keyed,ops,toksep,std::forward<Func>(func));
 }
 
 
@@ -294,6 +391,8 @@ time_t secs_cast(const std::string &dur)
 	time_t ret = lex_cast<time_t>(dur.substr(0,dur.size()-1));
 	switch(postfix)
 	{
+		case 'y':  ret *= 12;
+		case 'M':  ret *= 4;
 		case 'w':  ret *= 7;
 		case 'd':  ret *= 24;
 		case 'h':  ret *= 60;
@@ -309,12 +408,18 @@ std::string secs_cast(const time_t &t)
 {
 	std::stringstream ret;
 
-	const time_t minutes   { t / (60L)                   };
-	const time_t hours     { t / (60L * 60L)             };
-	const time_t days      { t / (60L * 60L * 24L)       };
-	const time_t weeks     { t / (60L * 60L * 24L * 7L)  };
+	const time_t minutes   { t / (60L)                              };
+	const time_t hours     { t / (60L * 60L)                        };
+	const time_t days      { t / (60L * 60L * 24L)                  };
+	const time_t weeks     { t / (60L * 60L * 24L * 7L)             };
+	const time_t months    { t / (60L * 60L * 24L * 7L * 4L)        };
+	const time_t years     { t / (60L * 60L * 24L * 7L * 4L * 12L)  };
 
-	if(weeks >= 1)
+	if(years >= 1)
+		ret << years << " years";
+	else if(months >= 1)
+		ret << months << " months";
+	else if(weeks >= 1)
 		ret << weeks << " weeks";
 	else if(days >= 1)
 		ret << days << " days";
