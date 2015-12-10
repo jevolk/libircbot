@@ -145,7 +145,7 @@ inline
 Locutor &Locutor::operator<<(const colors::FG &fg)
 {
 	auto &out = *this;
-	out << "\x03" << std::setfill('0') << std::setw(2) << int(fg);
+	out << "\x03" << std::setfill('0') << std::setw(2) << std::right << int(fg);
 	this->fg = fg;
 	return *this;
 }
@@ -155,8 +155,8 @@ inline
 Locutor &Locutor::operator<<(const colors::BG &bg)
 {
 	auto &out = *this;
-	out << "\x03" << std::setfill('0') << std::setw(2) << int(fg);
-	out << "," << std::setfill('0') << std::setw(2) << int(bg);
+	out << "\x03" << std::setfill('0') << std::setw(2) << std::right << int(fg);
+	out << "," << std::setfill('0') << std::setw(2) << std::right << int(bg);
 	return *this;
 }
 
