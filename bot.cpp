@@ -300,12 +300,12 @@ bool Bot::cancel_handle()
 }
 
 
-void Bot::set_handle(std::shared_ptr<boost::asio::streambuf> buf)
+void Bot::set_handle(const std::shared_ptr<boost::asio::streambuf> buf)
 {
 	namespace ph = std::placeholders;
 
-	auto &sock = sess.get_socket();
-	const auto hf = sess.wrap(std::bind(&Bot::handle_pck,this,ph::_1,ph::_2,buf));
+	auto &sock(sess.get_socket());
+	const auto hf(sess.wrap(std::bind(&Bot::handle_pck,this,ph::_1,ph::_2,buf)));
 	boost::asio::async_read_until(sock.get_sd(),*buf,"\r\n",hf);
 }
 
@@ -354,8 +354,8 @@ void Bot::handle_conn(const boost::system::error_code &e)
 
 
 void Bot::handle_pck(const boost::system::error_code &e,
-                     size_t size,
-                     std::shared_ptr<boost::asio::streambuf> buf)
+                     const size_t size,
+                     const std::shared_ptr<boost::asio::streambuf> buf)
 {
 	if(e)
 	{
@@ -372,10 +372,13 @@ void Bot::handle_pck(const boost::system::error_code &e,
 	if(size <= 2)
 		return;
 
-	const std::lock_guard<Bot> lock(*this);
-	std::istream stream(buf.get());
-	const Msg msg(stream);
-	events.msg(msg);
+	{
+		const std::lock_guard<Bot> lock(*this);
+		std::istream stream(buf.get());
+		const Msg msg(stream);
+		events.msg(msg);
+	}
+
 	set_handle(buf);
 }
 

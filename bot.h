@@ -240,7 +240,7 @@ struct Bot : public std::mutex
 	void enter_state_fault(const State &s);
 
 	// IO Service handlers
-	void handle_pck(const boost::system::error_code &e, size_t size, std::shared_ptr<boost::asio::streambuf> sbuf);
+	void handle_pck(const boost::system::error_code &e, const size_t size, const std::shared_ptr<boost::asio::streambuf> sbuf);
 	void handle_conn(const boost::system::error_code &e);
 	void handle_timeout(const boost::system::error_code &e);
 	void handle_socket_ecb(const boost::system::error_code &e);
@@ -255,7 +255,7 @@ struct Bot : public std::mutex
 	void state_next();                                // Increment to next State and call handlers
 	bool cancel_handle();                             // Cancel socket handles
 	bool cancel_timer(const bool &all = false);       // Cancel pending timer(s)
-	void set_handle(std::shared_ptr<boost::asio::streambuf> buf);
+	void set_handle(const std::shared_ptr<boost::asio::streambuf> buf);
 	void set_timer(const milliseconds &ms);           // set a timer for anything
 	void set_timeout();                               // set_timer(opts["timeout"])
 	void new_handle();
