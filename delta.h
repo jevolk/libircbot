@@ -43,7 +43,6 @@ struct Delta : std::tuple<bool,char,Mask>
 
 	explicit operator const bool &() const          { return std::get<SIGN>(*this);                }
 	explicit operator const char &() const          { return std::get<MODE>(*this);                }
-	explicit operator Mask() const                  { return std::get<MASK>(*this);                }
 	operator std::string() const;
 
 	Delta operator~() const &;                      // Invert the sign
@@ -273,11 +272,13 @@ inline
 std::ostream &operator<<(std::ostream &s,
                          const Delta &d)
 {
-	s << d.sign(std::get<Delta::SIGN>(d));
-	s << std::get<Delta::MODE>(d);
+	using std::get;
+
+	s << d.sign(get<d.SIGN>(d));
+	s << get<d.MODE>(d);
 
 	if(!d.empty_mask())
-		s << " " << std::get<Delta::MASK>(d);
+		s << " " << get<d.MASK>(d);
 
 	return s;
 }

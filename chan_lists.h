@@ -35,11 +35,14 @@ inline
 void Lists::delta_flag(const Mask &mask,
                        const std::string &delta)
 {
-	auto it = flags.find({mask});
+	if(mask.empty())
+		throw Assertive("Lists::delta_flag on empty Mask");
+
+	auto it(flags.find({mask}));
 	if(it == flags.end())
 		it = flags.emplace(mask).first;
 
-	auto &f = const_cast<Flags &>(*it);
+	auto &f(const_cast<Flags &>(*it));
 	f.delta(delta);
 	f.update(time(NULL));
 }
@@ -48,13 +51,15 @@ void Lists::delta_flag(const Mask &mask,
 inline
 bool Lists::set_mode(const Delta &d)
 {
+	using std::get;
+
 	switch(char(d))
 	{
-		case 'b':     return bool(d)? bans.emplace(Mask(d)).second:
-		                              bans.erase(Mask(d));
+		case 'b':     return bool(d)? bans.emplace(get<d.MASK>(d)).second:
+		                              bans.erase(get<d.MASK>(d));
 
-		case 'q':     return bool(d)? quiets.emplace(Mask(d)).second:
-		                              quiets.erase(Mask(d));
+		case 'q':     return bool(d)? quiets.emplace(get<d.MASK>(d)).second:
+		                              quiets.erase(get<d.MASK>(d));
 
 		default:      return false;
 	}
@@ -75,7 +80,10 @@ bool Lists::has_flag(const Mask &m,
                      const char &flag)
 const
 {
-	const auto it = flags.find({m});
+	if(m.empty())
+		return false;
+
+	const auto it(flags.find({m}));
 	return it != flags.end()? it->get_flags().has(flag) : false;
 }
 
@@ -92,6 +100,9 @@ inline
 bool Lists::has_flag(const Mask &m)
 const
 {
+	if(m.empty())
+		return false;
+
 	return flags.count({m});
 }
 
@@ -108,7 +119,7 @@ inline
 const Flags &Lists::get_flag(const Mask &m)
 const
 {
-	const auto it = flags.find({m});
+	const auto it(flags.find({m}));
 	if(it == flags.end())
 		throw Exception("No flags matching this user.");
 
