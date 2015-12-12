@@ -74,7 +74,7 @@ bool Lists::has_flag(const User &u,
                      const char &flag)
 const
 {
-	return has_flag(u.get_acct(),flag);
+	return u.is_logged_in()? has_flag(u.get_acct(),flag) : false;
 }
 
 
@@ -83,9 +83,6 @@ bool Lists::has_flag(const Mask &m,
                      const char &flag)
 const
 {
-	if(m.empty())
-		return false;
-
 	const auto it(flags.find({m}));
 	return it != flags.end()? it->get_flags().has(flag) : false;
 }
@@ -95,7 +92,7 @@ inline
 bool Lists::has_flag(const User &u)
 const
 {
-	return has_flag(u.get_acct());
+	return u.is_logged_in()? has_flag(u.get_acct()) : false;
 }
 
 
@@ -103,9 +100,6 @@ inline
 bool Lists::has_flag(const Mask &m)
 const
 {
-	if(m.empty())
-		return false;
-
 	return flags.count({m});
 }
 
