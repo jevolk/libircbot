@@ -61,6 +61,9 @@ bool Lists::set_mode(const Delta &d)
 		case 'q':     return bool(d)? quiets.emplace(get<d.MASK>(d)).second:
 		                              quiets.erase(get<d.MASK>(d));
 
+		case 'e':     return bool(d)? excepts.emplace(get<d.MASK>(d)).second:
+		                              excepts.erase(get<d.MASK>(d));
+
 		default:      return false;
 	}
 }
