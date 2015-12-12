@@ -695,18 +695,20 @@ inline
 void Chan::csdo(const Deltas &deltas)
 {
 	const auto cmd(gen_cs_cmd(get_name(),deltas));
-	if(cmd.empty())
+	if(!cmd.empty())
 	{
-		for(const auto &delta : deltas)
-			if(!csdo(delta))
-				opdo(delta);
-
+		Service &cs(get_cs());
+		cs << cmd << flush;
+		cs.terminator_errors();
 		return;
 	}
 
-	Service &cs(get_cs());
-	cs << cmd << flush;
-	cs.terminator_errors();
+	Deltas remain;
+	for(const auto &delta : deltas)
+		if(!csdo(delta))
+			remain.emplace_back(delta);
+
+	opdo(remain);
 }
 
 
