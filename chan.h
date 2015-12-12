@@ -112,6 +112,8 @@ class Chan : public Locutor,
 	void topic(const std::string &topic);
 	void kick(const User &user, const std::string &reason = "");
 	void remove(const User &user, const std::string &reason = "");
+	Deltas unexcept(const User &user);
+	Deltas except(const User &user);
 	Deltas unquiet(const User &user);
 	Deltas quiet(const User &user);
 	Deltas unban(const User &user);
@@ -273,6 +275,39 @@ inline
 Delta Chan::devoice(const User &u)
 {
 	const Delta d(u.devoice());
+	operator()(d);
+	return d;
+}
+
+
+inline
+Deltas Chan::except(const User &u)
+{
+	Deltas d;
+	d.emplace_back(u.except(Mask::HOST));
+
+	if(u.is_logged_in())
+		d.emplace_back(u.except(Mask::ACCT));
+
+	operator()(d);
+	return d;
+}
+
+
+inline
+Deltas Chan::unexcept(const User &u)
+{
+	Deltas d;
+
+	if(lists.excepts.count(u.mask(Mask::NICK)))
+		d.emplace_back(u.unexcept(Mask::NICK));
+
+	if(lists.excepts.count(u.mask(Mask::HOST)))
+		d.emplace_back(u.unexcept(Mask::HOST));
+
+	if(u.is_logged_in() && lists.excepts.count(u.mask(Mask::ACCT)))
+		d.emplace_back(u.unexcept(Mask::ACCT));
+
 	operator()(d);
 	return d;
 }

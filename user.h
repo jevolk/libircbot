@@ -42,6 +42,8 @@ class User : public Locutor,
 	Mask mask(const Mask::Type &t) const;              // Generate a mask from *this members
 	bool is_myself(const Mask &mask) const;            // Test if mask can match us
 
+	Delta unexcept(const Quiet::Type &type) const      { return {"-e",mask(type)};                   }
+	Delta except(const Quiet::Type &type) const        { return {"+e",mask(type)};                   }
 	Delta unquiet(const Quiet::Type &type) const       { return {"-q",mask(type)};                   }
 	Delta quiet(const Quiet::Type &type) const         { return {"+q",mask(type)};                   }
 	Delta unban(const Ban::Type &type) const           { return {"-b",mask(type)};                   }
