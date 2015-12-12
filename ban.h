@@ -40,7 +40,6 @@ mask(mask),
 oper(oper),
 time(time)
 {
-
 }
 
 

@@ -145,7 +145,7 @@ template<class T,
 auto &Handlers<Handler>::add(const T &num,
                              Args&&... args)
 {
-	const auto event = name_cast(num);
+	const auto event(name_cast(num));
 	return add(event,std::forward<Args>(args)...);
 }
 
@@ -155,7 +155,7 @@ template<class... Args>
 auto &Handlers<Handler>::add(const std::string &event,
                              Args&&... args)
 {
-	auto iit = handlers.emplace(event,Handler{std::forward<Args>(args)...});
+	auto iit(handlers.emplace(event,Handler{std::forward<Args>(args)...}));
 	return iit->second;
 }
 
@@ -165,7 +165,7 @@ template<class... Args>
 auto &Handlers<Handler>::add(const char *const &event,
                              Args&&... args)
 {
-	auto iit = handlers.emplace(event,Handler{std::forward<Args>(args)...});
+	auto iit(handlers.emplace(event,Handler{std::forward<Args>(args)...}));
 	return iit->second;
 }
 

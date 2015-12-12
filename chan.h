@@ -27,9 +27,6 @@ std::string gen_cs_cmd(const std::string &chan, const Deltas &delta);
 class Chan : public Locutor,
              public Acct
 {
-	Service *chanserv;
-
-	// State
 	bool joined;                                            // Indication the server has sent us
 	Mode _mode;                                             // Channel's mode state
 	time_t creation;                                        // Timestamp for channel from server
@@ -44,7 +41,6 @@ class Chan : public Locutor,
 	Lists lists;                                            // Bans/Quiets/etc direct interface
 
 	auto &get_name() const                                  { return Locutor::get_target();         }
-	auto &get_cs() const                                    { return *chanserv;                     }
 	auto &is_joined() const                                 { return joined;                        }
 	auto &get_mode() const                                  { return _mode;                         }
 	auto &get_creation() const                              { return creation;                      }
@@ -61,8 +57,6 @@ class Chan : public Locutor,
 	bool is_op() const;
 
   protected:
-	auto &get_cs()                                          { return *chanserv;                     }
-
 	bool run_opdo();
 	void fetch_oplists();
 	void event_opped();                                     // We have been opped up
@@ -134,7 +128,9 @@ class Chan : public Locutor,
 	friend User &operator<<(User &u, const Chan &chan);     // for CNOTICE / CPRIVMSG
 	friend User &operator<<(User &u, const Chan *const &c); // for CNOTICE / CPRIVMSG
 
-	Chan(Adb *const &adb, Sess *const &sess, Service *const &chanserv, const std::string &name, const std::string &pass = "");
+	explicit Chan(const std::string &name, const std::string &pass = {});
+	Chan(Chan &&chan) noexcept;
+	Chan(const Chan &chan);
 	virtual ~Chan() = default;
 
 	friend std::ostream &operator<<(std::ostream &s, const Chan &chan);
@@ -142,20 +138,51 @@ class Chan : public Locutor,
 
 
 inline
-Chan::Chan(Adb *const &adb,
-           Sess *const &sess,
-           Service *const &chanserv,
-           const std::string &name,
+Chan::Chan(const std::string &name,
            const std::string &pass):
-Locutor(sess,name),
-Acct(adb,&Locutor::get_target()),
-chanserv(chanserv),
+Locutor(name),
+Acct(&Locutor::get_target()),
 joined(false),
 creation(0),
 pass(pass)
 {
+}
 
 
+inline
+Chan::Chan(const Chan &chan):
+Locutor(chan),
+Acct(&Locutor::get_target()),
+joined(chan.joined),
+_mode(chan._mode),
+creation(chan.creation),
+pass(chan.pass),
+_topic(chan._topic),
+info(chan.info),
+opdo_deltas(chan.opdo_deltas),
+opdo_lambdas(chan.opdo_lambdas),
+users(chan.users),
+lists(chan.lists)
+{
+}
+
+
+inline
+Chan::Chan(Chan &&chan)
+noexcept:
+Locutor(std::move(chan)),
+Acct(&Locutor::get_target()),
+joined(std::move(chan.joined)),
+_mode(std::move(chan._mode)),
+creation(std::move(chan.creation)),
+pass(std::move(chan.pass)),
+_topic(std::move(chan._topic)),
+info(std::move(chan.info)),
+opdo_deltas(std::move(chan.opdo_deltas)),
+opdo_lambdas(std::move(chan.opdo_lambdas)),
+users(std::move(chan.users)),
+lists(std::move(chan.lists))
+{
 }
 
 
@@ -163,7 +190,7 @@ inline
 User &operator<<(User &user,
                  const Chan &chan)
 {
-	const Sess &sess = chan.get_sess();
+	const auto &sess(get_sess());
 
 	if(!chan.is_op())
 		return user;
@@ -201,7 +228,7 @@ Chan &operator<<(Chan &chan,
 inline
 void Chan::join()
 {
-	Quote out(get_sess(),"JOIN");
+	Quote out("JOIN");
 	out << get_name();
 
 	if(!get_pass().empty())
@@ -212,7 +239,7 @@ void Chan::join()
 inline
 void Chan::part()
 {
-	Quote(get_sess(),"PART") << get_name();
+	Quote("PART") << get_name();
 }
 
 
@@ -389,7 +416,7 @@ void Chan::remove(const User &user,
 	const auto &nick(user.get_nick());
 	opdo([nick,reason](Chan &chan)
 	{
-		Quote(chan.get_sess(),"REMOVE") << chan.get_name() << " "  << nick << " :" << reason;
+		Quote("REMOVE") << chan.get_name() << " "  << nick << " :" << reason;
 	});
 }
 
@@ -401,7 +428,7 @@ void Chan::kick(const User &user,
 	const auto &nick(user.get_nick());
 	opdo([nick,reason](Chan &chan)
 	{
-		Quote(chan.get_sess(),"KICK") << chan.get_name() << " "  << nick << " :" << reason;
+		Quote("KICK") << chan.get_name() << " "  << nick << " :" << reason;
 	});
 }
 
@@ -412,7 +439,7 @@ void Chan::invite(const std::string &nick)
 
 	const auto func([nick](Chan &chan)
 	{
-		Quote(chan.get_sess(),"INVITE") << nick << " " << chan.get_name();
+		Quote("INVITE") << nick << " " << chan.get_name();
 	});
 
 	if(has_mode('g'))
@@ -435,7 +462,7 @@ void Chan::topic(const std::string &text)
 
 	opdo([text](Chan &chan)
 	{
-		Quote out(chan.get_sess(),"TOPIC");
+		Quote out("TOPIC");
 		out << chan.get_name();
 
 		if(!text.empty())
@@ -447,7 +474,7 @@ void Chan::topic(const std::string &text)
 inline
 void Chan::knock(const std::string &msg)
 {
-	Quote(get_sess(),"KNOCK") << get_name() << " :" << msg;
+	Quote("KNOCK") << get_name() << " :" << msg;
 }
 
 
@@ -546,7 +573,7 @@ void Chan::csinfo()
 inline
 void Chan::names()
 {
-	Quote out(get_sess(),"NAMES");
+	Quote out("NAMES");
 	out << get_name() << flush;
 }
 
@@ -633,7 +660,7 @@ void Chan::akicklist()
 inline
 void Chan::who(const std::string &flags)
 {
-	Quote out(get_sess(),"WHO");
+	Quote out("WHO");
 	out << get_name() << " " << flags << flush;
 }
 

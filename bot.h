@@ -79,7 +79,10 @@ namespace handler
 	#include "handler.h"
 	#include "handlers.h"
 }
+
 #include "adb.h"
+extern thread_local Adb *adb;
+inline auto &get_adb()                 { assert(adb); return *adb;             }
 #include "acct.h"
 namespace sendq
 {
@@ -91,12 +94,20 @@ namespace recvq
 }
 #include "socket.h"
 #include "sess.h"
+extern thread_local Sess *sess;
+inline auto &get_sess()                { assert(sess); return *sess;           }
+inline auto &get_opts()                { return get_sess().get_opts();         }
+inline auto &get_sock()                { return get_sess().get_socket();       }
 #include "floodguard.h"
 #include "cork.h"
 #include "quote.h"
 #include "cmds.h"
 #include "locutor.h"
 #include "service.h"
+extern thread_local Service *chanserv;
+extern thread_local Service *nickserv;
+inline auto &get_cs()                  { assert(chanserv); return *chanserv;   }
+inline auto &get_ns()                  { assert(nickserv); return *nickserv;   }
 #include "user.h"
 namespace chan
 {
@@ -107,7 +118,11 @@ namespace chan
 }
 using Chan = chan::Chan;
 #include "users.h"
+extern thread_local Users *users;
+inline auto &get_users()               { assert(users); return *users;         }
 #include "chans.h"
+extern thread_local Chans *chans;
+inline auto &get_chans()               { assert(chans); return *chans;         }
 #include "events.h"
 #include "nickserv.h"
 #include "chanserv.h"
@@ -142,6 +157,8 @@ struct Bot : public std::mutex
 	Chans chans;                                      // Channels state
 	NickServ ns;                                      // NickServ service parser
 	ChanServ cs;                                      // ChanServ service parser
+
+	void set_tls_context();                           // Direct thread-locals at this instance.
 
   private:
 	static void log(const State &state, const std::string &remarks = "");

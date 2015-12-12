@@ -8,19 +8,11 @@
 
 class Chans
 {
-	Adb &adb;
-	Sess &sess;
-	Service *chanserv;
-
 	using Cmp = CaseInsensitiveLess<std::string>;
 	std::map<std::string, Chan, Cmp> chans;
 
   public:
 	// Observers
-	auto &get_adb() const                              { return adb;                                }
-	auto &get_sess() const                             { return sess;                               }
-	auto &get_cs() const                               { return *chanserv;                          }
-
 	const Chan &get(const std::string &name) const     { return chans.at(name);                     }
 	bool has(const std::string &name) const            { return chans.count(name);                  }
 	auto num() const                                   { return chans.size();                       }
@@ -43,12 +35,6 @@ class Chans
 	void servicejoin();                                // Joins all channels with access
 	void autojoin();                                   // Joins all channels in the autojoin list
 
-	// We construct before ChanServ; Bot sets this
-	void set_service(Service &chanserv)                { this->chanserv = &chanserv;                }
-
-	Chans(Adb &adb, Sess &sess, Service *const &chanserv = nullptr):
-	      adb(adb), sess(sess), chanserv(chanserv) {}
-
 	friend std::ostream &operator<<(std::ostream &s, const Chans &c);
 };
 
@@ -56,7 +42,8 @@ class Chans
 inline
 void Chans::autojoin()
 {
-	for(const auto &chan : sess.get_opts().autojoin)
+	const auto &opts(get_opts());
+	for(const auto &chan : opts.autojoin)
 		join(chan);
 }
 
@@ -64,10 +51,11 @@ void Chans::autojoin()
 inline
 void Chans::servicejoin()
 {
+	const auto &sess(get_sess());
 	for(const auto &p : sess.get_access())
 	{
-		const auto &chan = p.first;
-		const auto &mode = p.second;
+		const auto &chan(p.first);
+		const auto &mode(p.second);
 
 		if(mode.has('A') && (mode.has('o') || mode.has('O')))
 			join(chan);
@@ -78,7 +66,7 @@ void Chans::servicejoin()
 inline
 Chan &Chans::join(const std::string &name)
 {
-	Chan &chan = add(name);
+	Chan &chan(add(name));
 	chan.join();
 	return chan;
 }
@@ -99,9 +87,10 @@ catch(const std::out_of_range &e)
 inline
 Chan &Chans::add(const std::string &name)
 {
-	auto iit = chans.emplace(std::piecewise_construct,
-	                         std::forward_as_tuple(tolower(name)),
-	                         std::forward_as_tuple(&adb,&sess,chanserv,tolower(name)));
+	auto iit(chans.emplace(std::piecewise_construct,
+	                       std::forward_as_tuple(tolower(name)),
+	                       std::forward_as_tuple(tolower(name))));
+
 	return iit.first->second;
 }
 

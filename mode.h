@@ -90,10 +90,10 @@ bool Mode::delta(const std::string &str)
 & try
 {
 	if(str.at(0) == '-')
-		for(size_t i = 1; i < str.size(); i++)
+		for(size_t i(1); i < str.size(); i++)
 			rm(str.at(i));
 	else
-		for(size_t i = 1; i < str.size(); i++)
+		for(size_t i(1); i < str.size(); i++)
 			add(str.at(i));
 
 	return true;

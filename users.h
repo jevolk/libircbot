@@ -8,19 +8,11 @@
 
 class Users
 {
-	Adb &adb;
-	Sess &sess;
-	Service *nickserv;
-
 	using Cmp = CaseInsensitiveEqual<std::string>;
 	std::unordered_map<std::string, User, Cmp, Cmp> users;
 
   public:
 	// Observers
-	auto &get_adb() const                                { return adb;                        }
-	auto &get_sess() const                               { return sess;                       }
-	auto &get_ns() const                                 { return *nickserv;                  }
-
 	const User &get(const std::string &nick) const;
 	bool has(const std::string &nick) const              { return users.count(nick);          }
 	auto num() const                                     { return users.size();               }
@@ -34,12 +26,6 @@ class Users
 	void rename(const std::string &old_nick, const std::string &new_nick);
 	template<class... Args> User &add(const std::string &nick, Args&&... args);
 	bool del(const User &user);
-
-	// We construct before NickServ; Bot sets this
-	void set_service(Service &nickserv)                  { this->nickserv = &nickserv;        }
-
-	Users(Adb &adb, Sess &sess, Service *const &nickserv = nullptr):
-	      adb(adb), sess(sess), nickserv(nickserv) {}
 
 	friend std::ostream &operator<<(std::ostream &s, const Users &u);
 };
@@ -56,13 +42,9 @@ template<class... Args>
 User &Users::add(const std::string &nick,
                  Args&&... args)
 {
-	const auto &iit = users.emplace(std::piecewise_construct,
-	                                std::forward_as_tuple(nick),
-	                                std::forward_as_tuple(get_adb(),
-	                                                      get_sess(),
-	                                                      get_ns(),
-	                                                      nick,
-	                                                      std::forward<Args>(args)...));
+	const auto &iit(users.emplace(std::piecewise_construct,
+	                              std::forward_as_tuple(nick),
+	                              std::forward_as_tuple(nick,std::forward<Args>(args)...)));
 	return iit.first->second;
 }
 
@@ -71,8 +53,8 @@ inline
 void Users::rename(const std::string &old_nick,
                    const std::string &new_nick)
 {
-	User &old_user = users.at(old_nick);
-	User tmp_user = std::move(old_user);
+	User &old_user(users.at(old_nick));
+	User tmp_user(std::move(old_user));
 	tmp_user.set_nick(new_nick);
 	users.erase(old_nick);
 	users.emplace(new_nick,std::move(tmp_user));

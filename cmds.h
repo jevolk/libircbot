@@ -6,11 +6,8 @@
  */
 
 
-class Cmds
+struct Cmds
 {
-	Sess &sess;
-
-  public:
 	// [SEND] Compositions
 	template<class It> void accept_del(const It &begin, const It &end);
 	template<class It> void accept_add(const It &begin, const It &end);
@@ -18,14 +15,12 @@ class Cmds
 	template<class It> void monitor_add(const It &begin, const It &end);
 	template<class It> void monitor_del(const It &begin, const It &end);
 
-	void monitor_status()      { Quote(sess,"MONITOR S");  }
-	void monitor_clear()       { Quote(sess,"MONITOR C");  }
-	void monitor_list()        { Quote(sess,"MONITOR L");  }
+	void monitor_status()      { Quote("MONITOR S");  }
+	void monitor_clear()       { Quote("MONITOR C");  }
+	void monitor_list()        { Quote("MONITOR L");  }
 
 	template<class It> void topics(const It &begin, const It &end, const std::string &server = "");
 	template<class It> void isons(const It &begin, const It &end);
-
-	Cmds(Sess &sess): sess(sess) {}
 };
 
 
@@ -33,7 +28,7 @@ template<class It>
 void Cmds::isons(const It &begin,
                  const It &end)
 {
-	Quote ison(sess,"ISON");
+	Quote ison("ISON");
 
 	ison << ":";
 	std::for_each(begin,end,[&]
@@ -49,7 +44,7 @@ void Cmds::topics(const It &begin,
                   const It &end,
                   const std::string &server)
 {
-	Quote list(sess,"LIST");
+	Quote list("LIST");
 
 	std::for_each(begin,end,[&]
 	(const auto &s)
@@ -66,7 +61,7 @@ template<class It>
 void Cmds::accept_add(const It &begin,
                       const It &end)
 {
-	Quote accept(sess,"ACCEPT");
+	Quote accept("ACCEPT");
 
 	std::for_each(begin,end,[&]
 	(const auto &s)
@@ -80,7 +75,7 @@ template<class It>
 void Cmds::accept_del(const It &begin,
                       const It &end)
 {
-	Quote accept(sess,"ACCEPT");
+	Quote accept("ACCEPT");
 
 	std::for_each(begin,end,[&]
 	(const auto &s)
@@ -94,7 +89,7 @@ template<class It>
 void Cmds::monitor_add(const It &begin,
                        const It &end)
 {
-	Quote monitor(sess,"MONITOR");
+	Quote monitor("MONITOR");
 
 	monitor << "+ ";
 	std::for_each(begin,end,[&]
@@ -109,7 +104,7 @@ template<class It>
 void Cmds::monitor_del(const It &begin,
                        const It &end)
 {
-	Quote monitor(sess,"MONITOR");
+	Quote monitor("MONITOR");
 
 	monitor << "+ ";
 	std::for_each(begin,end,[&]

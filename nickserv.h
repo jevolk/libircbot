@@ -24,15 +24,26 @@ class NickServ : public Service
 	void ghost(const std::string &nick, const std::string &pass);
 	void listchans();
 
-	NickServ(Adb &adb, Sess &sess, Users &users, Chans &chans, Events &events):
-	         Service(adb,sess,"NickServ"), users(users), chans(chans), events(events) {}
+	NickServ(Users &users, Chans &chans, Events &events);
 };
+
+
+inline
+NickServ::NickServ(Users &users,
+                   Chans &chans,
+                   Events &events):
+Service("NickServ"),
+users(users),
+chans(chans),
+events(events)
+{
+}
 
 
 inline
 void NickServ::listchans()
 {
-	Stream &out = *this;
+	Stream &out(*this);
 	out << "LISTCHANS" << flush;
 	terminator_next("channel access match");
 }
@@ -42,7 +53,7 @@ inline
 void NickServ::identify(const std::string &acct,
                         const std::string &pass)
 {
-	Stream &out = *this;
+	Stream &out(*this);
 	out << "identify" << " " << acct << " " << pass << flush;
 	terminator_next("You are now identified");
 }
@@ -52,7 +63,7 @@ inline
 void NickServ::ghost(const std::string &nick,
                      const std::string &pass)
 {
-	Stream &out = *this;
+	Stream &out(*this);
 	out << "ghost" << " " << nick << " " << pass << flush;
 	terminator_any();
 }
@@ -62,7 +73,7 @@ inline
 void NickServ::regain(const std::string &nick,
                       const std::string &pass)
 {
-	Stream &out = *this;
+	Stream &out(*this);
 	out << "regain" << " " << nick << " " << pass << flush;
 	terminator_any();
 }
@@ -71,7 +82,7 @@ void NickServ::regain(const std::string &nick,
 inline
 void NickServ::captured(const Capture &msg)
 {
-	const auto &header = msg.front();
+	const auto &header(msg.front());
 	if(header.find("Information on") == 0)
 		handle_info(msg);
 	else if(header.find("Access flag(s)") == 0)
@@ -86,21 +97,21 @@ void NickServ::captured(const Capture &msg)
 inline
 void NickServ::handle_info(const Capture &msg)
 {
-	const auto tok = tokens(msg.front());
-	const auto &name = tolower(tok.at(2));
-	const auto &primary = tolower(tok.at(4).substr(0,tok.at(4).size()-2));  // Chop off "):]"
+	const auto tok(tokens(msg.front()));
+	const auto &name(tolower(tok.at(2)));
+	const auto &primary(tolower(tok.at(4).substr(0,tok.at(4).size()-2)));  // Chop off "):]"
 
-	Acct acct(get_adb(),&name);
-	Adoc info = acct.get("info");
+	Acct acct(&name);
+	Adoc info(acct.get("info"));
 	info.put("account",primary);
 	info.put("_fetched_",time(NULL));
 
-	auto it = msg.begin();
+	auto it(msg.begin());
 	for(++it; it != msg.end(); ++it)
 	{
-		const auto kv = split(*it," : ");
-		const auto &key = chomp(chomp(kv.first),".");
-		const auto &val = kv.second;
+		const auto kv(split(*it," : "));
+		const auto &key(chomp(chomp(kv.first),"."));
+		const auto &val(kv.second);
 		info.put(key,val);
 	}
 
@@ -111,13 +122,13 @@ void NickServ::handle_info(const Capture &msg)
 inline
 void NickServ::handle_listchans(const Capture &msg)
 {
-	Sess &sess = get_sess();
+	auto &sess(get_sess());
 
 	for(const auto &line : msg)
 	{
-		const auto tok = tokens(line);
-		const Mode flags = tok.at(2).substr(1); // chop leading +
-		const auto chan = tok.at(4);
+		const auto tok(tokens(line));
+		const Mode flags(tok.at(2).substr(1)); // chop leading +
+		const auto chan(tok.at(4));
 		sess.access[chan] = flags;
 	}
 
@@ -130,7 +141,7 @@ void NickServ::handle_listchans(const Capture &msg)
 inline
 void NickServ::handle_identified(const Capture &capture)
 {
-	Sess &sess(get_sess());
+	auto &sess(get_sess());
 	sess.set(IDENTIFIED);
 }
 
@@ -143,7 +154,7 @@ NickServ &NickServ::operator<<(const flush_t)
 		Stream::clear();
 	});
 
-	Quote ns(get_sess(),"ns");
+	Quote ns("ns");
 	ns << get_str() << flush;
 	return *this;
 }

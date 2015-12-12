@@ -440,7 +440,7 @@ inline
 std::string packetize(std::string &&str,
                       const size_t &max = 390)
 {
-	for(size_t i = 0, j = 0; i < str.size(); i++, j++)
+	for(size_t i(0), j(0); i < str.size(); i++, j++)
 	{
 		if(j > max)
 			str.insert(i,1,'\n');
@@ -465,7 +465,7 @@ std::string packetize(const std::string &str,
 template<size_t SIZE>
 const char *tolower(char (&buf)[SIZE])
 {
-	const size_t len = strnlen(buf,SIZE);
+	const size_t len(strnlen(buf,SIZE));
 	std::transform(buf,buf+len,buf,[]
 	(const char &c)
 	{

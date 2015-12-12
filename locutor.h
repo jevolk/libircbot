@@ -6,9 +6,8 @@
  */
 
 
-class Locutor : public Stream
+struct Locutor : Stream
 {
-  public:
 	enum Method
 	{
 		NOTICE,
@@ -29,7 +28,6 @@ class Locutor : public Stream
 	static const MethodEx DEFAULT_METHODEX = NONE;
 
   private:
-	Sess *sess;
 	Method meth;                                        // Stream state for current method
 	MethodEx methex;                                    // Stream state for extension to method
 	colors::FG fg;                                      // Stream state for foreground color
@@ -37,8 +35,6 @@ class Locutor : public Stream
 	Throttle throttle;
 
   public:
-	auto &get_sess() const                              { return *sess;                              }
-	auto &get_opts() const                              { return get_sess().get_opts();              }
 	auto &get_meth() const                              { return meth;                               }
 	auto &get_methex() const                            { return methex;                             }
 	auto &get_target() const                            { return target;                             }
@@ -63,7 +59,6 @@ class Locutor : public Stream
 	void reset();
 
   protected:
-	auto &get_sess()                                    { return *sess;                              }
 	auto &get_throttle()                                { return throttle;                           }
 
 	void msg(const char *const &cmd);
@@ -84,51 +79,47 @@ class Locutor : public Stream
 	void whois();                                       // Sends whois query
 	void mode();                                        // Sends mode query
 
-	Locutor(Sess *const &sess, const std::string &target);
-	Locutor(Sess &sess, const std::string &target): Locutor(&sess,target) {}
+	Locutor(const std::string &target);
 	virtual ~Locutor() = default;
 };
 
 
 inline
-Locutor::Locutor(Sess *const &sess,
-                 const std::string &target):
-sess(sess),
+Locutor::Locutor(const std::string &target):
 meth(DEFAULT_METHOD),
 methex(DEFAULT_METHODEX),
 fg(colors::FG::BLACK),
 target(target),
-throttle(sess? sess->get_opts().get<uint>("throttle-msg") : 0U)
+throttle(get_opts().get<uint>("throttle-msg"))
 {
-
 }
 
 
 inline
 void Locutor::mode()
 {
-	Quote(get_sess(),"MODE") << get_target();
+	Quote("MODE") << get_target();
 }
 
 
 inline
 void Locutor::whois()
 {
-	Quote(get_sess(),"WHOIS") << get_target();
+	Quote("WHOIS") << get_target();
 }
 
 
 inline
 void Locutor::mode(const Deltas &deltas)
 {
-	auto &sess = get_sess();
-	const auto &isup = sess.get_isupport();
-	const size_t max = isup.get("MODES",3);
+	auto &sess(get_sess());
+	const auto &isup(sess.get_isupport());
+	const size_t max(isup.get("MODES",3));
 
-	for(size_t i = 0; i < deltas.size(); i += max)
+	for(size_t i(0); i < deltas.size(); i += max)
 	{
-		const auto beg = deltas.begin() + i;
-		const auto end = deltas.begin() + std::min(deltas.size(),i + max);
+		const auto beg(deltas.begin() + i);
+		const auto end(deltas.begin() + std::min(deltas.size(),i + max));
 		mode(deltas.substr(beg,end));
 	}
 }
@@ -137,14 +128,14 @@ void Locutor::mode(const Deltas &deltas)
 inline
 void Locutor::mode(const std::string &str)
 {
-	Quote(get_sess(),"MODE") << get_target() << " " << str;
+	Quote("MODE") << get_target() << " " << str;
 }
 
 
 inline
 Locutor &Locutor::operator<<(const colors::FG &fg)
 {
-	auto &out = *this;
+	auto &out(*this);
 	out << "\x03" << std::setfill('0') << std::setw(2) << std::right << int(fg);
 	this->fg = fg;
 	return *this;
@@ -154,7 +145,7 @@ Locutor &Locutor::operator<<(const colors::FG &fg)
 inline
 Locutor &Locutor::operator<<(const colors::BG &bg)
 {
-	auto &out = *this;
+	auto &out(*this);
 	out << "\x03" << std::setfill('0') << std::setw(2) << std::right << int(fg);
 	out << "," << std::setfill('0') << std::setw(2) << std::right << int(bg);
 	return *this;
@@ -164,7 +155,7 @@ Locutor &Locutor::operator<<(const colors::BG &bg)
 inline
 Locutor &Locutor::operator<<(const colors::Mode &mode)
 {
-	auto &out = *this;
+	auto &out(*this);
 	out << (unsigned char)mode;
 	return *this;
 }
@@ -211,26 +202,26 @@ Locutor &Locutor::operator<<(const flush_t)
 inline
 void Locutor::msg(const char *const &cmd)
 {
-	Throttle &throttle = get_throttle();
-	const auto toks = tokens(packetize(get_str()),"\n");
+	auto &throttle(get_throttle());
+	const auto toks(tokens(packetize(get_str()),"\n"));
 
 	switch(methex)
 	{
 		case WALLCHOPS:
 		case WALLVOICE:
 		{
-			const auto prefix = methex == WALLCHOPS? '@' : '+';
+			const auto prefix(methex == WALLCHOPS? '@' : '+');
 			for(const auto &token : toks)
-				Quote(get_sess(),cmd,throttle.next()) << prefix << get_target() << " :" << token;
+				Quote(cmd,throttle.next()) << prefix << get_target() << " :" << token;
 
 			break;
 		}
 
 		case CMSG:
 		{
-			const auto &chan = toks.at(0);
-			for(auto it = toks.begin()+1; it != toks.end(); ++it)
-				Quote(get_sess(),cmd,throttle.next()) << get_target() << " "  << chan << " :" << *it;
+			const auto &chan(toks.at(0));
+			for(auto it(toks.begin()+1); it != toks.end(); ++it)
+				Quote(cmd,throttle.next()) << get_target() << " "  << chan << " :" << *it;
 
 			break;
 		}
@@ -239,7 +230,7 @@ void Locutor::msg(const char *const &cmd)
 		default:
 		{
 			for(const auto &token : toks)
-				Quote(get_sess(),cmd,throttle.next()) << get_target() << " :" << token;
+				Quote(cmd,throttle.next()) << get_target() << " :" << token;
 
 			break;
 		}

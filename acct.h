@@ -11,7 +11,6 @@ class Acct
 	Adb *adb;
 	const std::string *acct;                             // the document key ; subclass holds data
 
-  protected:
 	auto &get_adb()                                     { return *adb;                              }
 
   public:
@@ -41,18 +40,26 @@ class Acct
 	// Convenience for single key => value
 	template<class T> void set_val(const std::string &key, const T &t);
 
-	Acct(Adb *const &adb, const std::string *const &acct): adb(adb), acct(acct) {}
-	Acct(Adb &adb, const std::string *const &acct): Acct(&adb,acct) {}
+	Acct(const std::string *const &acct, Adb *const &adb = bot::adb);
 	virtual ~Acct() = default;
 };
+
+
+inline
+Acct::Acct(const std::string *const &acct,
+           Adb *const &adb):
+adb(adb),
+acct(acct)
+{
+}
 
 
 template<class T>
 void Acct::set_val(const std::string &key,
                    const T &t)
 {
-	Adb &adb = get_adb();
-	Adoc doc = adb.get(std::nothrow,get_acct());
+	Adb &adb(get_adb());
+	Adoc doc(adb.get(std::nothrow,get_acct()));
 	doc.put(key,t);
 	set(doc);
 }
@@ -62,8 +69,8 @@ inline
 void Acct::set(const std::string &key,
                const Adoc &doc)
 {
-	Adb &adb = get_adb();
-	Adoc main = get();
+	Adb &adb(get_adb());
+	Adoc main(get());
 	main.put_child(key,doc);
 	adb.set(get_acct(),main);
 }
@@ -72,7 +79,7 @@ void Acct::set(const std::string &key,
 template<class T>
 T Acct::get_val(const std::string &key)
 {
-	const Adoc doc = get(key);
+	const Adoc doc(get(key));
 	return doc.get_value<T>(T());
 }
 
@@ -81,6 +88,6 @@ template<class T>
 T Acct::get_val(const std::string &key)
 const
 {
-	const Adoc doc = get(key);
+	const Adoc doc(get(key));
 	return doc.get_value<T>(T());
 }

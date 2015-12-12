@@ -38,7 +38,6 @@ inline
 Stream::Stream(void)
 {
 	sbuf.exceptions(std::ios_base::badbit|std::ios_base::failbit);
-
 }
 
 

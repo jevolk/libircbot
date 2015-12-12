@@ -23,9 +23,16 @@ class ChanServ : public Service
 	void handle_chan_notice(const Msg &msg, Chan &chan);
 	void handle(const Msg &msg);
 
-	ChanServ(Adb &adb, Sess &sess, Chans &chans):
-	         Service(adb,sess,"ChanServ"), chans(chans) {}
+	ChanServ(Chans &chans);
 };
+
+
+inline
+ChanServ::ChanServ(Chans &chans):
+Service("ChanServ"),
+chans(chans)
+{
+}
 
 
 inline
@@ -82,17 +89,17 @@ void ChanServ::handle_set_flags(Chan &chan,
 inline
 void ChanServ::handle_info(const Capture &msg)
 {
-	const auto tok = tokens(msg.front());
-	const auto name = tolower(chomp(tok.at(2),":"));
-	Chan &chan = chans.get(name);
+	const auto tok(tokens(msg.front()));
+	const auto name(tolower(chomp(tok.at(2),":")));
+	Chan &chan(chans.get(name));
 
 	chan::Info info;
-	auto it = msg.begin();
+	auto it(msg.begin());
 	for(++it; it != msg.end(); ++it)
 	{
-		const auto kv = split(*it," : ");
-		const std::string &key = chomp(chomp(kv.first),".");
-		const std::string &val = kv.second;
+		const auto kv(split(*it," : "));
+		const std::string &key(chomp(chomp(kv.first),"."));
+		const std::string &val(kv.second);
 		info.emplace(key,val);
 	}
 
@@ -103,12 +110,12 @@ void ChanServ::handle_info(const Capture &msg)
 inline
 void ChanServ::handle_flagslist(const Capture &msg)
 {
-	const auto name = tolower(tokens(get_terminator().front()).at(2));
-	Chan &chan = chans.get(name);
+	const auto name(tolower(tokens(get_terminator().front()).at(2)));
+	Chan &chan(chans.get(name));
 
 	decltype(chan.lists.flags) flags;
-	auto it = msg.begin();
-	auto end = msg.begin();
+	auto it(msg.begin());
+	auto end(msg.begin());
 	std::advance(it,2);
 	std::advance(end,msg.size() - 1);
 	for(; it != end; ++it)
@@ -133,12 +140,12 @@ void ChanServ::handle_flagslist(const Capture &msg)
 inline
 void ChanServ::handle_akicklist(const Capture &msg)
 {
-	auto it = msg.begin();
-	const size_t ns = tokens(*it).at(3).size() - 1;
-	const auto name = tolower(tokens(*it).at(3).substr(0,ns));
-	Chan &chan = chans.get(name);
+	auto it(msg.begin());
+	const size_t ns(tokens(*it).at(3).size() - 1);
+	const auto name(tolower(tokens(*it).at(3).substr(0,ns)));
+	Chan &chan(chans.get(name));
 
-	auto end = msg.begin();
+	auto end(msg.begin());
 	std::advance(end,msg.size());
 	decltype(chan.lists.akicks) akicks;
 	for(++it; it != end; ++it)
@@ -185,7 +192,7 @@ ChanServ &ChanServ::operator<<(const flush_t)
 		Stream::clear();
 	});
 
-	Quote cs(get_sess(),"cs");
+	Quote cs("cs");
 	cs << get_str() << flush;
 	return *this;
 }

@@ -42,7 +42,7 @@ milliseconds Throttle::next()
 {
 	using namespace std::chrono;
 
-	const auto now = steady_clock::now();
+	const auto now(steady_clock::now());
 
 	if(state < now)
 	{
@@ -50,8 +50,8 @@ milliseconds Throttle::next()
 		return 0ms;
 	}
 
-	const auto ret = duration_cast<milliseconds>(state.time_since_epoch()) -
-	                 duration_cast<milliseconds>(now.time_since_epoch());
+	const auto ret(duration_cast<milliseconds>(state.time_since_epoch()) -
+	               duration_cast<milliseconds>(now.time_since_epoch()));
 	state += inc;
 	return ret;
 }
@@ -60,8 +60,8 @@ milliseconds Throttle::next()
 inline
 time_point Throttle::next_abs()
 {
-	const auto now = steady_clock::now();
-	const auto ret = state < now? now : state;
+	const auto now(steady_clock::now());
+	const auto ret(state < now? now : state);
 	state = ret + inc;
 	return ret;
 }
@@ -73,7 +73,7 @@ const
 {
 	using namespace std::chrono;
 
-	const auto now = steady_clock::now();
+	const auto now(steady_clock::now());
 
 	if(state < now)
 		return 0ms;
@@ -87,6 +87,6 @@ inline
 time_point Throttle::calc_abs()
 const
 {
-	const auto now = steady_clock::now();
+	const auto now(steady_clock::now());
 	return state < now? now : state + inc;
 }

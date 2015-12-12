@@ -144,15 +144,15 @@ params([&]() -> Params
 		return {{str.substr(1)}};
 
 	static const delim d(" ");
-	const auto col = str.find(" :");
+	const auto col(str.find(" :"));
 	if(col == std::string::npos)
 	{
 		const boost::tokenizer<delim> tk(str,d);
 		return {tk.begin(),tk.end()};
 	}
 
-	const std::string &par = str.substr(0,col);
-	const std::string &trail = str.substr(col+2);
+	const auto &par(str.substr(0,col));
+	const auto &trail(str.substr(col+2));
 	const boost::tokenizer<delim> tk(par,d);
 	Params ret(tk.begin(),tk.end());
 	ret.emplace_back(trail);

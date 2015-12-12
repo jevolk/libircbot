@@ -9,8 +9,6 @@
 class User : public Locutor,
              public Acct
 {
-	Service *nickserv;
-
 	// nick -> Locutor::target                         // who 'n'
 	std::string host;                                  // who 'h'
 	std::string acct;                                  // who 'a' (account name)
@@ -20,14 +18,11 @@ class User : public Locutor,
 	bool away;
 	size_t chans;                                      // reference counter for number of channels
 
-	auto &get_ns()                                     { return *nickserv;                           }
-
   public:
 	static constexpr int WHO_RECIPE                    = 0;
 	static constexpr const char *const WHO_FORMAT      = "%tnha,0";       // ID must match WHO_RECIPE
 
 	// Observers
-	auto &get_ns() const                               { return *nickserv;                           }
 	auto &get_nick() const                             { return Locutor::get_target();               }
 	auto &get_host() const                             { return host;                                }
 	auto &get_acct() const                             { return acct;                                }
@@ -68,30 +63,22 @@ class User : public Locutor,
 	void who(const std::string &flags = WHO_FORMAT);   // Requests who with flags we need by default
 	void info();                                       // Update acct["info"] from nickserv
 
-	User(Adb *const &adb          = nullptr,
-	     Sess *const &sess        = nullptr,
-	     Service *const &ns       = nullptr,
-	     const std::string &nick  = std::string(),
-	     const std::string &host  = std::string(),
-	     const std::string &acct  = std::string());
-
-	template<class... A> User(Adb &adb, Sess &sess, Service &ns, A&&... a):
-	                          User(&adb,&sess,&ns,std::forward<A>(a)...) {}
+	explicit User(const std::string &nick, const std::string &host = {}, const std::string &acct = {});
+	User(User &&user) noexcept;
+	User(const User &user);
+	User &operator=(User &&) noexcept = default;
+	User &operator=(const User &) = default;
 
 	friend std::ostream &operator<<(std::ostream &s, const User &u);
 };
 
 
 inline
-User::User(Adb *const &adb,
-           Sess *const &sess,
-           Service *const &nickserv,
-           const std::string &nick,
+User::User(const std::string &nick,
            const std::string &host,
            const std::string &acct):
-Locutor(sess,nick),
-Acct(adb,&this->acct),
-nickserv(nickserv),
+Locutor(nick),
+Acct(&this->acct),
 host(host),
 acct(tolower(acct)),
 secure(false),
@@ -100,15 +87,44 @@ idle(0),
 away(false),
 chans(0)
 {
+}
 
 
+inline
+User::User(const User &user):
+Locutor(user),
+Acct(&this->acct),
+host(user.host),
+acct(user.acct),
+secure(user.secure),
+signon(user.signon),
+idle(user.idle),
+away(user.away),
+chans(user.chans)
+{
+}
+
+
+inline
+User::User(User &&user)
+noexcept:
+Locutor(std::move(user)),
+Acct(&this->acct),
+host(std::move(user.host)),
+acct(std::move(user.acct)),
+secure(std::move(user.secure)),
+signon(std::move(user.signon)),
+idle(std::move(user.idle)),
+away(std::move(user.away)),
+chans(std::move(user.chans))
+{
 }
 
 
 inline
 void User::info()
 {
-	Service &ns = get_ns();
+	Service &ns(get_ns());
 	ns << "info " << acct << flush;
 	ns.terminator_next("*** End of Info ***");
 }
@@ -117,7 +133,7 @@ void User::info()
 inline
 void User::who(const std::string &flags)
 {
-	Quote out(get_sess(),"WHO");
+	Quote out("WHO");
 	out << get_nick() << " " << flags << flush;
 }
 
@@ -126,8 +142,7 @@ inline
 bool User::is_owner()
 const
 {
-	Sess &sess = get_sess();
-	const auto &opts = sess.get_opts();
+	const auto &opts(get_opts());
 	return is_logged_in() && (get_acct() == opts["owner"] || get_nick() == opts["owner"]);
 }
 
@@ -136,9 +151,7 @@ inline
 bool User::is_logged_in()
 const
 {
-	return !acct.empty() &&
-	       acct != "0"   &&
-	       acct != "*";
+	return !acct.empty() && acct != "0" && acct != "*";
 }
 
 

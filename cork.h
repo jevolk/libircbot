@@ -6,21 +6,19 @@
  */
 
 
-class Cork
+struct Cork
 {
-	Socket &socket;
-
-  public:
-	Cork(Sess &sess):
-	     socket(sess.get_socket())
+	Cork()
 	{
-		socket.set_cork();
+		auto &sock(get_sock());
+		sock.set_cork();
 	}
 
 	~Cork()
 	{
-		socket.unset_cork();
-		if(!socket.has_cork())
-			socket << socket.flush;
+		auto &sock(get_sock());
+		sock.unset_cork();
+		if(!sock.has_cork())
+			sock << Socket::flush;
 	}
 };

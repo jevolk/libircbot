@@ -59,13 +59,13 @@ ep([&]() -> decltype(ep)
 {
 	using namespace boost::asio::ip;
 
-	const auto &host = opts.has("proxy")? split(opts["proxy"],":").first : opts["host"];
-	const auto &port = opts.has("proxy")? split(opts["proxy"],":").second : opts["port"];
+	const auto &host(opts.has("proxy")? split(opts["proxy"],":").first : opts["host"]);
+	const auto &port(opts.has("proxy")? split(opts["proxy"],":").second : opts["port"]);
 
 	boost::system::error_code ec;
 	tcp::resolver res(ios);
 	const tcp::resolver::query query(tcp::v4(),host,port,tcp::resolver::query::numeric_service);
-	const auto it = res.resolve(query,ec);
+	const auto it(res.resolve(query,ec));
 
 	if(ec)
 		throw Internal(ec.value(),ec.message());
@@ -142,9 +142,7 @@ Socket &Socket::operator<<(const flush_t)
 	}
 
 	const scope clr(std::bind(&Socket::clear,this));
-	const auto xmit_time = delay == 0ms? throttle.next_abs():
-	                                     steady_clock::now() + delay;
-
+	const auto xmit_time(delay == 0ms? throttle.next_abs() : steady_clock::now() + delay);
 	const std::lock_guard<decltype(sendq::mutex)> lock(sendq::mutex);
 	sendq::queue.push_back({xmit_time,&sd,sendq.str()});
 	sendq::cond.notify_one();

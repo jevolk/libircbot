@@ -103,11 +103,11 @@ template<> inline
 bool Opts::get<bool>(const std::string &key)
 const try
 {
-	const auto it = this->find(key);
+	const auto it(this->find(key));
 	if(it == end())
 		return false;
 
-	const auto &val = it->second;
+	const auto &val(it->second);
 	switch(hash(tolower(val)))
 	{
 		case hash("enable"):
@@ -163,7 +163,7 @@ catch(const std::out_of_range &e)
 inline
 std::string &Opts::operator[](const std::string &key)
 {
-	const auto it = find(key);
+	const auto it(find(key));
 	return it == end()? emplace(key,std::string()).first->second:
 	                    it->second;
 }
@@ -173,7 +173,7 @@ inline
 const std::string &Opts::operator[](const std::string &key)
 const
 {
-	const auto it = find(key);
+	const auto it(find(key));
 	if(it == end())
 		throw std::out_of_range("Key not found");
 

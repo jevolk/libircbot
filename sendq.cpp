@@ -44,17 +44,17 @@ void sendq::purge(const void *const &ptr)
 {
 	const std::lock_guard<decltype(mutex)> lock(mutex);
 
-	const auto queue_end = std::remove_if(queue.begin(),queue.end(),[&ptr]
+	const auto queue_end(std::remove_if(queue.begin(),queue.end(),[&ptr]
 	(const auto &ent)
 	{
 		return ent.sd == ptr;
-	});
+	}));
 
-	const auto slowq_end = std::remove_if(slowq.begin(),slowq.end(),[&ptr]
+	const auto slowq_end(std::remove_if(slowq.begin(),slowq.end(),[&ptr]
 	(const auto &ent)
 	{
 		return ent.sd == ptr;
-	});
+	}));
 
 	queue.erase(queue_end,queue.end());
 	slowq.erase(slowq_end,slowq.end());
@@ -77,10 +77,10 @@ try
 }
 catch(const boost::system::system_error &e)
 {
-	const auto it = ecbs.find(ent.sd);
+	const auto it(ecbs.find(ent.sd));
 	if(it != ecbs.end())
 	{
-		const auto cb = it->second;
+		const auto cb(it->second);
 		const unlock_guard<decltype(mutex)> unlock(mutex);
 		cb(e.code());
 	}
@@ -119,8 +119,8 @@ auto sendq::next_event()
 	if(slowq.empty())
 		return milliseconds(std::numeric_limits<uint32_t>::max());
 
-	const auto now = steady_clock::now();
-	const auto &abs = slowq.front().absolute;
+	const auto now(steady_clock::now());
+	const auto &abs(slowq.front().absolute);
 	if(abs < now)
 		return milliseconds(0);
 
@@ -147,7 +147,7 @@ try
 
 		while(!slowq.empty())
 		{
-			Ent &ent = slowq.front();
+			Ent &ent(slowq.front());
 			if(ent.absolute > steady_clock::now())
 				break;
 

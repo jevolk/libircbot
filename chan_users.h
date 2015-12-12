@@ -49,9 +49,9 @@ inline
 bool Users::add(User &user,
                 const Mode &mode)
 {
-	const auto iit = users.emplace(std::piecewise_construct,
-	                               std::forward_as_tuple(user.get_nick()),
-	                               std::forward_as_tuple(std::make_tuple(&user,mode)));
+	const auto iit(users.emplace(std::piecewise_construct,
+	                             std::forward_as_tuple(user.get_nick()),
+	                             std::forward_as_tuple(std::make_tuple(&user,mode))));
 	return iit.second;
 }
 
@@ -61,11 +61,11 @@ bool Users::rename(const User &user,
                    const std::string &old)
 try
 {
-	auto val = users.at(old);
+	auto val(users.at(old));
 	users.erase(old);
 
-	const auto &new_nick = user.get_nick();
-	const auto iit = users.emplace(new_nick,val);
+	const auto &new_nick(user.get_nick());
+	const auto iit(users.emplace(new_nick,val));
 	return iit.second;
 }
 catch(const std::out_of_range &e)
@@ -111,9 +111,9 @@ void Users::for_each(const std::function<void (User &, Mode &)> &c)
 {
 	for(auto &pair : users)
 	{
-		auto &val = pair.second;
-		auto &user = *std::get<0>(val);
-		auto &mode = std::get<1>(val);
+		auto &val(pair.second);
+		auto &user(*std::get<0>(val));
+		auto &mode(std::get<1>(val));
 		c(user,mode);
 	}
 }
@@ -131,9 +131,8 @@ inline
 size_t Users::count_logged_in()
 const
 {
-	size_t ret = 0;
-	for_each([&ret]
-	(const User &user)
+	size_t ret(0);
+	for_each([&ret](const User &user)
 	{
 		ret += user.is_logged_in();
 	});
@@ -157,9 +156,9 @@ const
 {
 	for(auto &pair : users)
 	{
-		const auto &val = pair.second;
-		const auto &user = *std::get<0>(val);
-		const auto &mode = std::get<1>(val);
+		const auto &val(pair.second);
+		const auto &user(*std::get<0>(val));
+		const auto &mode(std::get<1>(val));
 		c(user,mode);
 	}
 }
@@ -172,8 +171,8 @@ std::ostream &operator<<(std::ostream &s,
 	s << "users:      \t" << u.num() << std::endl;
 	for(const auto &userp : u.users)
 	{
-		const auto &val = userp.second;
-		const auto &mode = std::get<1>(val);
+		const auto &val(userp.second);
+		const auto &mode(std::get<1>(val));
 
 		if(!mode.empty())
 			s << "+" << mode;

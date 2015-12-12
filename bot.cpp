@@ -14,6 +14,12 @@ using namespace irc::bot;
 // irc::bot:: library extern base
 std::locale irc::bot::locale;                               // util.h
 thread_local std::ostringstream irc::bot::Stream::sbuf;     // stream.h
+thread_local Adb *irc::bot::adb;
+thread_local Sess *irc::bot::sess;
+thread_local Users *irc::bot::users;
+thread_local Chans *irc::bot::chans;
+thread_local Service *irc::bot::nickserv;
+thread_local Service *irc::bot::chanserv;
 
 
 Bot::Bot(const Opts &opts,
@@ -31,20 +37,16 @@ adb([&]
 sess(this->opts,
      static_cast<std::mutex &>(*this),
      ios? *ios : recvq::ios),
-users(adb,sess),
-chans(adb,sess),
-ns(adb,sess,users,chans,events),
-cs(adb,sess,chans)
+ns(users,chans,events),
+cs(chans)
 {
 	namespace ph = std::placeholders;
 
-	users.set_service(ns);
-	chans.set_service(cs);
-
-	auto &sock = sess.get_socket();
+	auto &sock(sess.get_socket());
 	sock.set_ecb(std::bind(&Bot::handle_socket_ecb,this,ph::_1));
 	init_state_handlers();
 	init_irc_handlers();
+	set_tls_context();
 
 	if(this->opts.get<bool>("connect"))
 		connect();
@@ -225,7 +227,7 @@ void Bot::quit()
 	sess.post([this]
 	{
 		if(sess.is(State::ACTIVE) && sess.has_opt("quit") && opts["quit"] != "hard")
-			Quote(sess,"QUIT") << " :" << opts["quit-msg"];
+			Quote("QUIT") << " :" << opts["quit-msg"];
 		else
 			disconnect();
 	});
@@ -244,7 +246,7 @@ void Bot::disconnect()
 		return;
 
 	cancel_timer(true);
-	auto &sock = sess.get_socket();
+	auto &sock(sess.get_socket());
 	sock.disconnect(opts["quit"] != "hard");
 	sess.unset(Flag::ALL);
 	state(State::INACTIVE);
@@ -253,7 +255,7 @@ void Bot::disconnect()
 
 void Bot::set_timeout()
 {
-	const auto timeout = opts.get<int64_t>("timeout");
+	const auto timeout(opts.get<int64_t>("timeout"));
 	set_timer(milliseconds(timeout));
 }
 
@@ -274,7 +276,7 @@ void Bot::set_timer(const milliseconds &ms)
 bool Bot::cancel_timer(const bool &all)
 {
 	boost::system::error_code ec;
-	auto &timer = sess.get_timer();
+	auto &timer(sess.get_timer());
 
 	if(all)
 		timer.cancel(ec);
@@ -294,7 +296,7 @@ void Bot::new_handle()
 bool Bot::cancel_handle()
 {
 	boost::system::error_code ec;
-	auto &sock = sess.get_socket();
+	auto &sock(sess.get_socket());
 	sock.get_sd().cancel(ec);
 	return !ec;
 }
@@ -313,7 +315,7 @@ void Bot::set_handle(const std::shared_ptr<boost::asio::streambuf> buf)
 void Bot::handle_socket_ecb(const boost::system::error_code &e)
 {
 	const std::lock_guard<Bot> lock(*this);
-	auto &sock = sess.get_socket();
+	auto &sock(sess.get_socket());
 	sess.set_current_exception();
 	sess.set(Flag::SOCKERR);
 	state(State::FAULT);
@@ -376,10 +378,22 @@ void Bot::handle_pck(const boost::system::error_code &e,
 		const std::lock_guard<Bot> lock(*this);
 		std::istream stream(buf.get());
 		const Msg msg(stream);
+		set_tls_context();
 		events.msg(msg);
 	}
 
 	set_handle(buf);
+}
+
+
+void Bot::set_tls_context()
+{
+	bot::adb       = &this->adb;
+	bot::sess      = &this->sess;
+	bot::users     = &this->users;
+	bot::chans     = &this->chans;
+	bot::nickserv  = &this->ns;
+	bot::chanserv  = &this->cs;
 }
 
 
@@ -389,9 +403,9 @@ void Bot::enter_state_connecting(const State &st)
 
 	log(st,"Entered CONNECTING");
 
-	auto &sock = sess.get_socket();
-	auto &ep = sock.get_ep();
-	auto &sd = sock.get_sd();
+	auto &sock(sess.get_socket());
+	auto &ep(sock.get_ep());
+	auto &sd(sock.get_sd());
 	set_timeout();
 	sd.async_connect(ep,std::bind(&Bot::handle_conn,this,ph::_1));
 }
@@ -426,7 +440,7 @@ void Bot::enter_state_proxying(const State &st)
 
 	events.msg.add("HTTP/1.0",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
 	events.msg.add("HTTP/1.1",std::bind(&Bot::handle_http,this,ph::_1),flag_t(0),handler::Prio::LIB);
-	Quote(sess,"CONNECT") << opts["host"] << ":" << opts["port"] << " HTTP/1.0\r\n";
+	Quote("CONNECT") << opts["host"] << ":" << opts["port"] << " HTTP/1.0\r\n";
 }
 
 
@@ -434,7 +448,7 @@ void Bot::enter_state_negotiating(const State &st)
 {
 	log(st,"Entered NEGOTIATING; Negotiating capabilities...");
 
-	Quote(sess,"CAP") << "LS";
+	Quote("CAP") << "LS";
 }
 
 
@@ -443,7 +457,7 @@ void Bot::leave_state_negotiating(const State &st)
 	log(st,"Leaving NEGOTIATING");
 
 	if(sess.is(Flag::NEGOTIATED))
-		Quote(sess,"CAP") << "END";
+		Quote("CAP") << "END";
 }
 
 
@@ -451,15 +465,15 @@ void Bot::enter_state_registering(const State &st)
 {
 	log(st,"Entered REGISTERING");
 
-	const auto &username = opts.has("user")? opts["user"] : "nobody";
-	const auto &gecos = opts.has("gecos")? opts["gecos"] : "nowhere";
+	const auto &username(opts.has("user")? opts["user"] : "nobody");
+	const auto &gecos(opts.has("gecos")? opts["gecos"] : "nowhere");
 
-	const Cork cork(sess);
-	Quote(sess,"NICK") << sess.get_nick();
-	Quote(sess,"USER") << username << " unknown unknown :" << gecos;
+	const Cork cork;
+	Quote("NICK") << sess.get_nick();
+	Quote("USER") << username << " unknown unknown :" << gecos;
 
 	if(opts.has("umode"))
-		Quote(sess,"MODE") << sess.get_nick() << " " << opts["umode"];
+		Quote("MODE") << sess.get_nick() << " " << opts["umode"];
 }
 
 
@@ -519,7 +533,7 @@ void Bot::handle_ping(const Msg &msg)
 
 	log(msg,"PING");
 
-	Quote(sess,"PONG") << msg[SOURCE];
+	Quote("PONG") << msg[SOURCE];
 }
 
 
@@ -555,7 +569,7 @@ void Bot::handle_myinfo(const Msg &msg)
 
 	log(msg,"MYINFO");
 
-	Server &server = sess.server;
+	Server &server(sess.server);
 	server.name = msg[SERVNAME];
 	server.vers = msg[VERSION];
 	server.user_modes = msg[USERMODS];
@@ -568,14 +582,14 @@ void Bot::handle_isupport(const Msg &msg)
 {
 	log(msg,"ISUPPORT");
 
-	Server &server = sess.server;
-	const std::string &self = msg[0];
+	Server &server(sess.server);
+	const auto &selfg(msg[0]);
 	for(size_t i = 1; i < msg.num_params(); i++)
 	{
-		const std::string &opt = msg[i];
-		const size_t sep = opt.find('=');
-		const std::string key = opt.substr(0,sep);
-		const std::string val = sep == std::string::npos? "" : opt.substr(sep+1);
+		const auto &opt(msg[i]);
+		const auto sep(opt.find('='));
+		const auto key(opt.substr(0,sep));
+		const auto val(sep == std::string::npos? "" : opt.substr(sep+1));
 
 		if(std::all_of(key.begin(),key.end(),::isupper))
 			server.isupport.emplace(key,val);
@@ -597,15 +611,15 @@ void Bot::handle_cap(const Msg &msg)
 
 	log(msg,"CAP");
 
-	Server &server = sess.server;
-	const auto caps = tokens(msg[CAPLIST]);
+	Server &server(sess.server);
+	const auto caps(tokens(msg[CAPLIST]));
 	switch(hash(msg[COMMAND]))
 	{
 		case hash("LS"):
 			server.caps.insert(caps.begin(),caps.end());
 
 			if(sess.is(State::NEGOTIATING))
-				Quote(sess,"CAP") << "REQ :account-notify extended-join multi-prefix";
+				Quote("CAP") << "REQ :account-notify extended-join multi-prefix";
 
 			break;
 
@@ -648,7 +662,7 @@ void Bot::handle_quit(const Msg &msg)
 		return;
 	}
 
-	User &user = users.get(msg.get_nick());
+	User &user(users.get(msg.get_nick()));
 	chans.for_each([&](Chan &chan)
 	{
 		events.chan_user(msg,chan,user);
@@ -670,12 +684,12 @@ void Bot::handle_nick(const Msg &msg)
 
 	log(msg,"NICK");
 
-	const auto &old_nick = msg.get_nick();
-	const auto &new_nick = msg[NICKNAME];
+	const auto &old_nick(msg.get_nick());
+	const auto &new_nick(msg[NICKNAME]);
 
 	if(old_nick == sess.get_nick())
 	{
-		const bool regained = !sess.is_desired_nick();
+		const bool regained(!sess.is_desired_nick());
 		sess.set_nick(new_nick);
 
 		if(regained)  // Nick was regained on connect; nothing will exist in Users/chans.
@@ -683,7 +697,7 @@ void Bot::handle_nick(const Msg &msg)
 	}
 
 	users.rename(old_nick,new_nick);
-	User &user = users.get(new_nick);
+	User &user(users.get(new_nick));
 	chans.for_each([&](Chan &chan)
 	{
 		chan.users.rename(user,old_nick);
@@ -700,7 +714,7 @@ void Bot::handle_account(const Msg &msg)
 
 	log(msg,"ACCOUNT");
 
-	User &user = users.add(msg.get_nick());
+	User &user(users.add(msg.get_nick(),msg.get_host()));
 	user.set_acct(msg[ACCTNAME]);
 	events.user(msg,user);
 }
@@ -712,17 +726,17 @@ void Bot::handle_join(const Msg &msg)
 
 	log(msg,"JOIN");
 
-	const auto &acct = sess.has_cap("extended-join")? msg[ACCTNAME] : std::string();
-	User &user = users.add(msg.get_nick(),msg.get_host(),acct);
-	Chan &chan = chans.add(msg[CHANNAME]);
+	const auto &acct(sess.has_cap("extended-join")? msg[ACCTNAME] : std::string());
+	User &user(users.add(msg.get_nick(),msg.get_host(),acct));
+	Chan &chan(chans.add(msg[CHANNAME]));
 	if(chan.users.add(user))
 		user.inc_chans();
 
 	if(msg.get_nick() == sess.get_nick())
 	{
 		// We have joined
-		const Opts &opts = sess.get_opts();
-		const FloodGuard guard(sess,opts.get<uint>("throttle-join"));
+		const Opts &opts(sess.get_opts());
+		const FloodGuard guard(opts.get<uint>("throttle-join"));
 		chan.set_joined(true);
 
 		if(opts.get<bool>("chan-fetch-mode"))
@@ -812,8 +826,8 @@ void Bot::handle_mode(const Msg &msg)
 		return;
 	}
 
-	Chan &chan = chans.get(msg[CHANNAME]);
-	const Server &serv = sess.get_server();
+	Chan &chan(chans.get(msg[CHANNAME]));
+	const Server &serv(sess.get_server());
 	const Deltas deltas(detok(msg.begin()+1,msg.end()),serv);
 	for(const Delta &d : deltas) try
 	{
@@ -822,9 +836,9 @@ void Bot::handle_mode(const Msg &msg)
 
 		// Target is a straight nickname, we find the user in this case
 		// TODO: find the user based on other matches?
-		if(std::get<Delta::MASK>(d) == Mask::INVALID)
+		if(std::get<d.MASK>(d) == Mask::INVALID)
 		{
-			User &user = users.get(std::get<Delta::MASK>(d));
+			User &user(users.get(std::get<d.MASK>(d)));
 			events.chan_user(msg,chan,user);
 		}
 	}
@@ -874,7 +888,7 @@ void Bot::handle_away(const Msg &msg)
 
 	log(msg,"AWAY");
 
-	User &user = users.get(msg[NICKNAME]);
+	User &user(users.get(msg[NICKNAME]));
 	user.set_away(true);
 	events.user(msg,user);
 }
@@ -886,8 +900,8 @@ void Bot::handle_channelmodeis(const Msg &msg)
 
 	log(msg,"CHANNELMODEIS");
 
-	const Server &serv = sess.get_server();
-	Chan &chan = chans.get(msg[CHANNAME]);
+	const Server &serv(sess.get_server());
+	Chan &chan(chans.get(msg[CHANNAME]));
 	const Deltas deltas(msg[DELTASTR],serv);
 	for(const auto &delta : deltas)
 		chan.set_mode(delta);
@@ -902,7 +916,7 @@ void Bot::handle_chanoprivsneeded(const Msg &msg)
 
 	log(msg,"CHANOPRIVSNEEDED");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	events.chan(msg,chan);
 }
 
@@ -913,7 +927,7 @@ void Bot::handle_creationtime(const Msg &msg)
 
 	log(msg,"CREATION TIME");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	chan.set_creation(msg.get<time_t>(TIME));
 	events.chan(msg,chan);
 }
@@ -925,7 +939,7 @@ void Bot::handle_topicwhotime(const Msg &msg)
 
 	log(msg,"TOPIC WHO TIME");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	std::get<Mask>(chan.set_topic()) = msg[MASK];
 	std::get<time_t>(chan.set_topic()) = msg.get<time_t>(TIME);
 	events.chan(msg,chan);
@@ -938,7 +952,7 @@ void Bot::handle_banlist(const Msg &msg)
 
 	log(msg,"BAN LIST");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	chan.lists.bans.emplace(msg[BANMASK],msg[OPERATOR],msg.get<time_t>(TIME));
 	events.chan(msg,chan);
 }
@@ -950,7 +964,7 @@ void Bot::handle_invitelist(const Msg &msg)
 
 	log(msg,"INVITE LIST");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	chan.lists.invites.emplace(msg[MASK],msg[OPERATOR],msg.get<time_t>(TIME));
 	events.chan(msg,chan);
 }
@@ -962,7 +976,7 @@ void Bot::handle_exceptlist(const Msg &msg)
 
 	log(msg,"EXEMPT LIST");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	chan.lists.excepts.emplace(msg[MASK],msg[OPERATOR],msg.get<time_t>(TIME));
 	events.chan(msg,chan);
 }
@@ -980,7 +994,7 @@ void Bot::handle_quietlist(const Msg &msg)
 		return;
 	}
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	chan.lists.quiets.emplace(msg[BANMASK],msg[OPERATOR],msg.get<time_t>(TIME));
 	events.chan(msg,chan);
 }
@@ -992,7 +1006,7 @@ void Bot::handle_topic(const Msg &msg)
 
 	log(msg,"TOPIC");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	std::get<std::string>(chan.set_topic()) = msg[TEXT];
 	events.chan(msg,chan);
 }
@@ -1004,7 +1018,7 @@ void Bot::handle_rpltopic(const Msg &msg)
 
 	log(msg,"RPLTOPIC");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	std::get<std::string>(chan.set_topic()) = msg[TEXT];
 	events.chan(msg,chan);
 }
@@ -1016,7 +1030,7 @@ void Bot::handle_notopic(const Msg &msg)
 
 	log(msg,"NOTOPIC");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	std::get<0>(chan.set_topic()) = {};
 	std::get<1>(chan.set_topic()) = {};
 	std::get<2>(chan.set_topic()) = {};
@@ -1076,7 +1090,7 @@ void Bot::handle_privmsg(const Msg &msg)
 	if(!users.has(msg.get_nick()))
 	{
 		// User is not in any channel with us.
-		User user(adb,sess,ns,msg.get_nick(),msg.get_host());
+		User user(msg.get_nick(),msg.get_host());
 		events.user(msg,user);
 		return;
 	}
@@ -1136,7 +1150,7 @@ void Bot::handle_notice(const Msg &msg)
 	if(!users.has(msg.get_nick()))
 	{
 		// User is not in any channel with us.
-		User user(adb,sess,ns,msg.get_nick(),msg.get_host());
+		User user(msg.get_nick(),msg.get_host());
 		events.user(msg,user);
 		return;
 	}
@@ -1192,7 +1206,7 @@ void Bot::handle_action(const Msg &msg)
 	if(!users.has(msg.get_nick()))
 	{
 		// User is not in any channel with us.
-		User user(adb,sess,ns,msg.get_nick(),msg.get_host());
+		User user(msg.get_nick(),msg.get_host());
 		events.user(msg,user);
 		return;
 	}
@@ -1225,7 +1239,7 @@ void Bot::handle_caction_owner(const Msg &msg,
 {
 	using namespace fmt::ACTION;
 
-	const auto tok = tokens(msg[TEXT]);
+	const auto tok(tokens(msg[TEXT]));
 	switch(hash(tolower(tok.at(0))))
 	{
 		case hash("proves"):
@@ -1244,15 +1258,15 @@ void Bot::handle_invite(const Msg &msg)
 
 	log(msg,"INVITE");
 
-	const Opts &opts = sess.get_opts();
+	const Opts &opts(sess.get_opts());
 	if(!opts.get<bool>("invite"))
 	{
 		std::cerr << "Attempt at INVITE was ignored by configuration." << std::endl;
 		return;
 	}
 
-	const time_t limit = opts.get<time_t>("invite-throttle");
-	static time_t throttle = 0;
+	const time_t limit(opts.get<time_t>("invite-throttle"));
+	static time_t throttle(0);
 	if(time(NULL) - limit < throttle)
 	{
 		std::cerr << "Attempt at INVITE was throttled by configuration." << std::endl;
@@ -1271,7 +1285,7 @@ void Bot::handle_ctcp(const Msg &msg)
 	if(!users.has(msg.get_nick()))
 	{
 		// User is not in any channel with us.
-		User user(adb,sess,ns,msg.get_nick(),msg.get_host());
+		User user(msg.get_nick(),msg.get_host());
 		events.user(msg,user);
 		return;
 	}
@@ -1287,19 +1301,19 @@ void Bot::handle_namreply(const Msg &msg)
 
 	log(msg,"NAM REPLY");
 
-	const Server &serv = sess.get_server();
-	Chan &chan = chans.add(msg[CHANNAME]);
+	const Server &serv(sess.get_server());
+	Chan &chan(chans.add(msg[CHANNAME]));
 	for(const auto &nick : tokens(msg[NAMELIST]))
 	{
-		auto modes = chan::nick_prefix(serv,nick);
+		auto modes(chan::nick_prefix(serv,nick));
 		std::transform(modes.begin(),modes.end(),modes.begin(),[&]
 		(const char &prefix)
 		{
 			return serv.prefix_to_mode(prefix);
 		});
 
-		const auto &raw_nick = nick.substr(modes.size());
-		User &user = users.add(raw_nick);
+		const auto &raw_nick(nick.substr(modes.size()));
+		User &user(users.add(raw_nick));
 		if(chan.users.add(user,modes))
 			user.inc_chans();
 	}
@@ -1362,8 +1376,8 @@ void Bot::handle_useronchannel(const Msg &msg)
 
 	log(msg,"USER ON CHAN");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
-	User &user = users.get(msg[NICKNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
+	User &user(users.get(msg[NICKNAME]));
 	events.chan_user(msg,chan,user);
 }
 
@@ -1381,12 +1395,12 @@ void Bot::handle_nicknameinuse(const Msg &msg)
 {
 	log(msg,"NICK IN USE");
 
-	const Opts &opts = sess.get_opts();
+	const Opts &opts(sess.get_opts());
 	if(!opts["ns-acct"].empty() && !opts["ns-pass"].empty())
 	{
 		const std::string randy(randstr(14));
 
-		Quote nick(sess,"NICK");
+		Quote nick("NICK");
 		nick(randy);
 		sess.set_nick(randy);
 		ns.regain(opts["ns-acct"],opts["ns-pass"]);
@@ -1406,15 +1420,15 @@ void Bot::handle_whoreply(const Msg &msg)
 {
 	log(msg,"WHO REPLY");
 
-	const std::string &selfserv = msg.get_nick();
-	const std::string &self = msg[WHOREPLY::SELFNAME];
-	const std::string &chan = msg[WHOREPLY::CHANNAME];
-	const std::string &user = msg[WHOREPLY::USERNAME];
-	const std::string &host = msg[WHOREPLY::HOSTNAME];
-	const std::string &serv = msg[WHOREPLY::SERVNAME];
-	const std::string &nick = msg[WHOREPLY::NICKNAME];
-	const std::string &flag = msg[WHOREPLY::FLAGS];
-	const std::string &addl = msg[WHOREPLY::ADDL];
+	const std::string &selfserv(msg.get_nick());
+	const std::string &self(msg[WHOREPLY::SELFNAME]);
+	const std::string &chan(msg[WHOREPLY::CHANNAME]);
+	const std::string &user(msg[WHOREPLY::USERNAME]);
+	const std::string &host(msg[WHOREPLY::HOSTNAME]);
+	const std::string &serv(msg[WHOREPLY::SERVNAME]);
+	const std::string &nick(msg[WHOREPLY::NICKNAME]);
+	const std::string &flag(msg[WHOREPLY::FLAGS]);
+	const std::string &addl(msg[WHOREPLY::ADDL]);
 
 }
 
@@ -1423,20 +1437,20 @@ void Bot::handle_whospecial(const Msg &msg)
 {
 	log(msg,"WHO SPECIAL");
 
-	const std::string &server = msg.get_nick();
-	const std::string &self = msg[0];
-	const int recipe = msg.get<int>(1);
+	const auto &server(msg.get_nick());
+	const auto &self(msg[0]);
+	const auto &recipe(msg.get<int>(1));
 
 	switch(recipe)
 	{
 		case User::WHO_RECIPE:
 		{
-			const std::string &host = msg[2];
-			const std::string &nick = msg[3];
-			const std::string &acct = msg[4];
+			const auto &host(msg[2]);
+			const auto &nick(msg[3]);
+			const auto &acct(msg[4]);
 			//const time_t idle = msg.get<time_t>(4);
 
-			User &user = users.get(nick);
+			User &user(users.get(nick));
 			user.set_host(host);
 			user.set_acct(acct);
 			//user.set_idle(idle);
@@ -1461,7 +1475,7 @@ try
 
 	log(msg,"WHOIS USER");
 
-	User &user = users.get(msg[NICKNAME]);
+	User &user(users.get(msg[NICKNAME]));
 	user.set_host(msg[HOSTNAME]);
 	events.user(msg,user);
 }
@@ -1479,7 +1493,7 @@ try
 
 	log(msg,"WHOIS IDLE");
 
-	User &user = users.get(msg[NICKNAME]);
+	User &user(users.get(msg[NICKNAME]));
 	user.set_idle(msg.get<time_t>(SECONDS));
 	user.set_signon(msg.get<time_t>(SIGNON));
 	events.user(msg,user);
@@ -1505,7 +1519,7 @@ try
 
 	log(msg,"WHOIS SECURE");
 
-	User &user = users.get(msg[NICKNAME]);
+	User &user(users.get(msg[NICKNAME]));
 	user.set_secure(true);
 	events.user(msg,user);
 }
@@ -1523,7 +1537,7 @@ try
 
 	log(msg,"WHOIS ACCOUNT");
 
-	User &user = users.get(msg[NICKNAME]);
+	User &user(users.get(msg[NICKNAME]));
 	user.set_acct(msg[ACCTNAME]);
 	events.user(msg,user);
 }
@@ -1561,7 +1575,7 @@ void Bot::handle_monlist(const Msg &msg)
 
 	log(msg,"MONLIST");
 
-	const auto nicks = tokens(msg[NICKLIST],",");
+	const auto nicks(tokens(msg[NICKLIST],","));
 }
 
 
@@ -1571,7 +1585,7 @@ void Bot::handle_mononline(const Msg &msg)
 
 	log(msg,"MONONLINE");
 
-	const auto masks = tokens(msg[MASKLIST],",");
+	const auto masks(tokens(msg[MASKLIST],","));
 }
 
 
@@ -1581,7 +1595,7 @@ void Bot::handle_monoffline(const Msg &msg)
 
 	log(msg,"MONOFFLINE");
 
-	const auto nicks = tokens(msg[NICKLIST],",");
+	const auto nicks(tokens(msg[NICKLIST],","));
 }
 
 
@@ -1641,7 +1655,7 @@ void Bot::handle_knock(const Msg &msg)
 
 	log(msg,"KNOCK");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	events.chan(msg,chan);
 }
 
@@ -1666,7 +1680,7 @@ void Bot::handle_modeislocked(const Msg &msg)
 
 	log(msg,"MODE IS LOCKED");
 
-	Chan &chan = chans.get(msg[CHANNAME]);
+	Chan &chan(chans.get(msg[CHANNAME]));
 	events.chan(msg,chan);
 }
 
@@ -1687,8 +1701,8 @@ void Bot::handle_unhandled(const Msg &msg)
 
 void Bot::state_next()
 {
-	const auto cur = state_t(sess.get_state());
-	const auto next = cur + 1;
+	const auto cur(state_t(sess.get_state()));
+	const auto next(cur + 1);
 	state(State(next));
 }
 
@@ -1709,7 +1723,7 @@ void Bot::state(const State &state)
 void Bot::log(const Msg &msg,
               const std::string &name)
 {
-	const std::string &n = name.empty()? msg.get_name() : name;
+	const auto &n(name.empty()? msg.get_name() : name);
 	std::cout << "<< " << std::setw(24) << std::setfill(' ') << std::left << n
 	          << msg
 	          << std::endl;

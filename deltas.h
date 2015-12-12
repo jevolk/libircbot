@@ -41,22 +41,22 @@ Deltas::Deltas(const std::string &delts,
                const Server *const &serv)
 try
 {
-	const auto tok = tokens(delts);
-	const auto &ms = tok.at(0);
+	const auto tok(tokens(delts));
+	const auto &ms(tok.at(0));
 
 	// Handle an empty mode string or simply a "+" string.
 	if(ms.empty() || (Delta::is_sign(ms.at(0)) && ms.size() == 1))
 		return;
 
-	bool sign = Delta::sign(ms.at(0));
+	bool sign(Delta::sign(ms.at(0)));
 	for(size_t i = 0, a = 1; i < ms.size(); i++)
 	{
 		if(Delta::is_sign(ms.at(i)))
 			sign = Delta::sign(ms.at(i++));
 
-		const char &mode = ms.at(i);
-		const bool has_arg = serv? serv->chan_pmodes.find(mode) != std::string::npos : tok.size() > a;
-		const auto &arg = has_arg? tok.at(a++) : "";
+		const char &mode(ms.at(i));
+		const bool has_arg(serv? serv->chan_pmodes.find(mode) != std::string::npos : tok.size() > a);
+		const auto &arg(has_arg? tok.at(a++) : "");
 		emplace_back(sign,mode,arg);
 	}
 }
@@ -182,13 +182,13 @@ const
 {
 	std::stringstream s;
 
-	for(auto it = begin; it != end; ++it)
+	for(auto it(begin); it != end; ++it)
 	{
 		const auto &d = *it;
 		s << d.sign(std::get<Delta::SIGN>(d)) << std::get<Delta::MODE>(d);
 	}
 
-	for(auto it = begin; it != end; ++it)
+	for(auto it(begin); it != end; ++it)
 	{
 		const auto &d = *it;
 		s << " " << std::get<Delta::MASK>(d);

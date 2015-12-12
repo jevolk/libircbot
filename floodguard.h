@@ -8,21 +8,20 @@
 
 class FloodGuard
 {
-	Socket &socket;
-	const milliseconds saved;
+	milliseconds saved;
 
   public:
-	FloodGuard(Sess &sess, const uint64_t &ms):
-	           FloodGuard(sess,milliseconds(ms)) {}
+	FloodGuard(const uint64_t &ms):
+	           FloodGuard(milliseconds(ms)) {}
 
-	FloodGuard(Sess &sess, const milliseconds &inc):
-	           socket(sess.get_socket()), saved(socket.get_throttle().get_inc())
+	FloodGuard(const milliseconds &inc):
+	           saved(get_sock().get_throttle().get_inc())
 	{
-		socket.set_throttle(inc);
+		get_sock().set_throttle(inc);
 	}
 
 	~FloodGuard()
 	{
-		socket.set_throttle(saved);
+		get_sock().set_throttle(saved);
 	}
 };

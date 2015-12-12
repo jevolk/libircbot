@@ -38,8 +38,8 @@ inline
 bool Server::has_prefix(const char &prefix)
 const try
 {
-	const auto &pxs = isupport["PREFIX"];
-	const auto pfx = split(pxs,")").second;
+	const auto &pxs(isupport["PREFIX"]);
+	const auto pfx(split(pxs,")").second);
 	return pfx.find(prefix) != std::string::npos;
 }
 catch(const std::out_of_range &e)
@@ -52,10 +52,10 @@ inline
 char Server::mode_to_prefix(const char &prefix)
 const
 {
-	const auto &pxs = isupport["PREFIX"];
-	const auto modes = between(pxs,"(",")");
-	const auto prefx = split(pxs,")").second;
-	const auto pos = modes.find(prefix);
+	const auto &pxs(isupport["PREFIX"]);
+	const auto modes(between(pxs,"(",")"));
+	const auto prefx(split(pxs,")").second);
+	const auto pos(modes.find(prefix));
 	return pos != std::string::npos? prefx.at(pos) : '\0';
 }
 
@@ -64,10 +64,10 @@ inline
 char Server::prefix_to_mode(const char &mode)
 const
 {
-	const auto &pxs = isupport["PREFIX"];
-	const auto modes = between(pxs,"(",")");
-	const auto prefx = split(pxs,")").second;
-	const auto pos = prefx.find(mode);
+	const auto &pxs(isupport["PREFIX"]);
+	const auto modes(between(pxs,"(",")"));
+	const auto prefx(split(pxs,")").second);
+	const auto pos(prefx.find(mode));
 	return pos != std::string::npos? modes.at(pos) : '\0';
 }
 
@@ -78,7 +78,7 @@ const
 {
 	for(const auto &tok : tokens(isupport["MAXLIST"],","))
 	{
-		const auto kv = split(tok,":");
+		const auto kv(split(tok,":"));
 		if(kv.first.find(prefix) != std::string::npos)
 			return kv.second.empty()? std::numeric_limits<size_t>::max():
 			                          lex_cast<size_t>(kv.second);
@@ -94,7 +94,7 @@ const
 {
 	for(const auto &tok : tokens(isupport["MAXLIST"],","))
 	{
-		const auto kv = split(tok,":");
+		const auto kv(split(tok,":"));
 		if(kv.first.find(prefix) != std::string::npos)
 			return kv.first;
 	}
@@ -109,7 +109,7 @@ const
 {
 	for(const auto &tok : tokens(isupport["CHANLIMIT"],","))
 	{
-		const auto kv = split(tok,":");
+		const auto kv(split(tok,":"));
 		if(kv.first.find(prefix) != std::string::npos)
 			return kv.second.empty()? std::numeric_limits<size_t>::max():
 			                          lex_cast<size_t>(kv.second);

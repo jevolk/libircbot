@@ -51,7 +51,7 @@ size_t recvq::num_threads()
 void recvq::add_thread(const size_t &num)
 {
 	const std::lock_guard<decltype(mutex)> lock(mutex);
-	for(size_t i = 0; i < num; i++)
+	for(size_t i(0); i < num; ++i)
 		thread.emplace_back(new std::thread(&recvq::worker));
 }
 
@@ -59,7 +59,7 @@ void recvq::add_thread(const size_t &num)
 void recvq::min_threads(const size_t &num)
 {
 	const std::lock_guard<decltype(mutex)> lock(mutex);
-	for(size_t i = thread.size(); i < num; i++)
+	for(size_t i(thread.size()); i < num; ++i)
 		thread.emplace_back(new std::thread(&recvq::worker));
 }
 

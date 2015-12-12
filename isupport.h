@@ -28,7 +28,7 @@ bool ISupport::find_in(const std::string &key,
                        A&&... val)
 const
 {
-	const auto it = find(key);
+	const auto it(find(key));
 	if(it == end())
 		return false;
 

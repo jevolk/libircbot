@@ -8,8 +8,6 @@
 
 class Service : public Stream
 {
-	Adb &adb;
-	Sess &sess;
 	std::string name;
 	std::list<std::string> capture;                    // State of the current capture
 	std::deque<std::forward_list<std::string>> queue;  // Queue of terminators
@@ -17,9 +15,6 @@ class Service : public Stream
 	void next();                                       // Discard capture, move to next in queue
 
   public:
-	auto &get_adb() const                              { return adb;                                   }
-	auto &get_sess() const                             { return sess;                                  }
-	auto &get_opts() const                             { return get_sess().get_opts();                 }
 	auto get_name() const                              { return name;                                  }
 	auto queue_size() const                            { return queue.size();                          }
 	auto capture_size() const                          { return capture.size();                        }
@@ -28,8 +23,6 @@ class Service : public Stream
   protected:
 	using Capture = decltype(capture);
 
-	auto &get_adb()                                    { return adb;                                   }
-	auto &get_sess()                                   { return sess;                                  }
 	auto &get_terminator() const                       { return queue.front();                         }
 
 	// Passes a complete multipart message to subclass
@@ -49,12 +42,17 @@ class Service : public Stream
 	// [RECV] Called by Bot handlers
 	void handle(const Msg &msg);
 
-	template<class... Args>
-	Service(Adb &adb, Sess &sess, const std::string &name):
-	        adb(adb), sess(sess), name(name) {}
+	Service(const std::string &name);
 
 	friend std::ostream &operator<<(std::ostream &s, const Service &srv);
 };
+
+
+inline
+Service::Service(const std::string &name):
+name(name)
+{
+}
 
 
 inline
