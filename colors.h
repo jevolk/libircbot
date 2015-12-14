@@ -29,7 +29,7 @@ enum class FG
 enum class BG
 {
 	LGRAY_BLINK,     BLACK,           BLUE,          GREEN,
-	RED,             RED_BLINK,       MAGENTA,       ORANGE,
+	RED_BLINK,       RED,             MAGENTA,       ORANGE,
 	ORANGE_BLINK,    GREEN_BLINK,     CYAN,          CYAN_BLINK,
 	BLUE_BLINK,      MAGENTA_BLINK,   BLACK_BLINK,   LGRAY,
 };
