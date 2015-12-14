@@ -29,7 +29,7 @@ opts(opts),
 adb([&]
 {
 	if(!this->opts.get<bool>("database"))
-		return std::string();
+		return std::string{};
 
 	mkdir(this->opts["dbdir"].c_str(),0777);
 	return this->opts["dbdir"] + "/ircbot";
@@ -726,7 +726,7 @@ void Bot::handle_join(const Msg &msg)
 
 	log(msg,"JOIN");
 
-	const auto &acct(sess.has_cap("extended-join")? msg[ACCTNAME] : std::string());
+	const auto &acct(sess.has_cap("extended-join")? msg[ACCTNAME] : std::string{});
 	User &user(users.add(msg.get_nick(),msg.get_host(),acct));
 	Chan &chan(chans.add(msg[CHANNAME]));
 	if(chan.users.add(user))

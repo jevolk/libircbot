@@ -33,15 +33,18 @@ class Flags
 	bool delta(const std::string &str) &      { return flags.delta(str);         }
 	void update(const time_t &time) &         { this->time = time;               }
 
+	explicit
 	Flags(const Mask &mask     = Mask(),
 	      const Mode &flags    = Mode(),
 	      const time_t &time   = 0,
 	      const bool &founder  = false);
 
+	explicit
 	Flags(const Deltas &deltas,
 	      const time_t &time,
 	      const bool &founder  = false);
 
+	explicit
 	Flags(const Delta &delta,
 	      const time_t &time,
 	      const bool &founder  = false);
@@ -90,7 +93,6 @@ flags(flags),
 time(time),
 founder(founder)
 {
-
 }
 
 

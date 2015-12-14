@@ -170,7 +170,7 @@ std::pair<std::string, std::string> split(const std::string &str,
 {
 	const auto pos(str.find(delim));
 	return pos == std::string::npos?
-	              std::make_pair(str,std::string()):
+	              std::make_pair(str,std::string{}):
 	              std::make_pair(str.substr(0,pos), str.substr(pos+delim.size()));
 }
 
@@ -308,7 +308,7 @@ void parse_opargs(const It &begin,
 		{
 			if(op.empty())
 			{
-				func(kov,op,std::string());
+				func(kov,op,std::string{});
 				break;
 			}
 			else if(kov.find(op) != std::string::npos)

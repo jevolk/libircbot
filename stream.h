@@ -68,5 +68,5 @@ inline
 void Stream::clear()
 {
 	sbuf.clear();
-	sbuf.str(std::string());
+	sbuf.str(std::string{});
 }

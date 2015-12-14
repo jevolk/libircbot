@@ -6,7 +6,7 @@
  */
 
 
-struct Mode : public std::string
+struct Mode : std::string
 {
 	bool has(const char &m) const                 { return find(m) != std::string::npos;  }
 	bool has(const Delta &d) const                { return has(std::get<Delta::MODE>(d)); }
@@ -34,10 +34,10 @@ struct Mode : public std::string
 	template<class T> Mode operator+(T&& m);      // add()
 	template<class T> Mode operator-(T&& m);      // rm()
 
-	Mode(void): std::string() {}
+	Mode(void) = default;
 	Mode(const std::string &mode);
 	Mode(const char &mode): std::string(1,mode) {}
-	Mode(const char *const &mode): Mode(std::string(mode)) {}
+	explicit Mode(const Delta &d): Mode(std::get<d.MODE>(d)) {}
 };
 
 
@@ -45,8 +45,6 @@ inline
 Mode::Mode(const std::string &mode):
 std::string(!mode.empty() && (mode.at(0) == '+' || mode.at(0) == '-')? mode.substr(1) : mode)
 {
-
-
 }
 
 

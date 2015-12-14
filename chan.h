@@ -90,7 +90,7 @@ class Chan : public Locutor,
 	void names();                                           // Update user list of channel (goes into this->users)
 
 	// [SEND] ChanServ interface to channel
-	void csclear(const Mode &mode = "bq");                  // clear a list with a Mode vector
+	void csclear(const Mode &mode = {"bq"});                // clear a list with a Mode vector
 	void akick_del(const Mask &mask);
 	void akick_del(const User &user);
 	void akick(const Mask &mask, const std::string &ts = "", const std::string &reason = "");
@@ -931,7 +931,7 @@ try
 }
 catch(const std::out_of_range &e)
 {
-	return std::string();
+	return std::string {};
 }
 
 

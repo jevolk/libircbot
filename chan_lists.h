@@ -38,7 +38,7 @@ void Lists::delta_flag(const Mask &mask,
 	if(mask.empty())
 		throw Assertive("Lists::delta_flag on empty Mask");
 
-	auto it(flags.find({mask}));
+	auto it(flags.find(Flags{mask}));
 	if(it == flags.end())
 		it = flags.emplace(mask).first;
 
@@ -83,7 +83,7 @@ bool Lists::has_flag(const Mask &m,
                      const char &flag)
 const
 {
-	const auto it(flags.find({m}));
+	const auto it(flags.find(Flags{m}));
 	return it != flags.end()? it->get_flags().has(flag) : false;
 }
 
@@ -100,7 +100,7 @@ inline
 bool Lists::has_flag(const Mask &m)
 const
 {
-	return flags.count({m});
+	return flags.count(Flags{m});
 }
 
 
@@ -116,7 +116,7 @@ inline
 const Flags &Lists::get_flag(const Mask &m)
 const
 {
-	const auto it(flags.find({m}));
+	const auto it(flags.find(Flags{m}));
 	if(it == flags.end())
 		throw Exception("No flags matching this user.");
 

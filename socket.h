@@ -154,7 +154,7 @@ inline
 void Socket::clear()
 {
 	sendq.clear();
-	sendq.str(std::string());
+	sendq.str(std::string{});
 	delay = 0ms;
 }
 

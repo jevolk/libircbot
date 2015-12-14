@@ -10,9 +10,9 @@ struct Adoc : public boost::property_tree::ptree
 {
 	operator std::string() const;
 
-	bool has(const std::string &key) const               { return !get(key,std::string()).empty();  }
+	bool has(const std::string &key) const               { return !get(key,std::string{}).empty();  }
 	bool has_child(const std::string &key) const         { return count(key) > 0;                   }
-	auto operator[](const std::string &key) const        { return get(key,std::string());           }
+	auto operator[](const std::string &key) const        { return get(key,std::string{});           }
 
 	void recurse(const std::function<void (const std::string &, const Adoc &)> &func) const;
 	void for_each(const std::function<void (const std::string &, const std::string &)> &func) const;
@@ -110,7 +110,7 @@ Adoc &Adoc::merge(const Adoc &src)
 					dst.put_child(key,child);
 			}
 			else if(key.empty())
-				dst.push(sub.get("",std::string()));
+				dst.push(sub.get("",std::string{}));
 			else
 				dst.put_child(key,sub);
 		}

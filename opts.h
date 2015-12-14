@@ -164,7 +164,7 @@ inline
 std::string &Opts::operator[](const std::string &key)
 {
 	const auto it(find(key));
-	return it == end()? emplace(key,std::string()).first->second:
+	return it == end()? emplace(key,std::string{}).first->second:
 	                    it->second;
 }
 
