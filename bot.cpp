@@ -165,6 +165,7 @@ void Bot::init_irc_handlers()
 	EVENT( LIBIRC_RFC_RPL_NOTOPIC, handle_notopic)
 	EVENT( 333     /* RPL_TOPICWHOTIME */, handle_topicwhotime)
 	EVENT( 329     /* RPL_CREATIONTIME */, handle_creationtime)
+	EVENT( 396     /* RPL_HOSTHIDDEN */, handle_hosthidden)
 	EVENT( LIBIRC_RFC_RPL_BANLIST, handle_banlist)
 	EVENT( LIBIRC_RFC_RPL_INVITELIST, handle_invitelist)
 	EVENT( LIBIRC_RFC_RPL_EXCEPTLIST, handle_exceptlist)
@@ -490,7 +491,8 @@ void Bot::enter_state_active(const State &st)
 {
 	log(st,"Entered ACTIVE");
 
-	chans.autojoin();
+	if(!opts.get<bool>("cloaked"))
+		chans.autojoin();
 }
 
 
@@ -918,6 +920,18 @@ void Bot::handle_chanoprivsneeded(const Msg &msg)
 
 	Chan &chan(chans.get(msg[CHANNAME]));
 	events.chan(msg,chan);
+}
+
+
+void Bot::handle_hosthidden(const Msg &msg)
+{
+	using namespace fmt::HOSTHIDDEN;
+
+	log(msg,"HOST HIDDEN");
+
+	// Expecting this message, can now join chans.
+	if(opts.get<bool>("cloaked"))
+		chans.autojoin();
 }
 
 
