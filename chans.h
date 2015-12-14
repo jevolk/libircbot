@@ -18,6 +18,8 @@ class Chans
 	auto num() const                                   { return chans.size();                       }
 
 	// Closures
+	void for_each(const User &user, const std::function<void (const Chan &)> &c) const;
+	void for_each(const User &user, const std::function<void (Chan &)> &c);
 	void for_each(const std::function<void (const Chan &)> &c) const;
 	void for_each(const std::function<void (Chan &)> &c);
 	bool any_of(const std::function<bool (const Chan &)> &c) const;
@@ -152,6 +154,27 @@ const
 {
 	for(const auto &chanp : chans)
 		closure(chanp.second);
+}
+
+
+inline
+void Chans::for_each(const User &user,
+                     const std::function<void (Chan &)> &closure)
+{
+	for(auto &chanp : chans)
+		if(chanp.second.users.has(user))
+			closure(chanp.second);
+}
+
+
+inline
+void Chans::for_each(const User &user,
+                     const std::function<void (const Chan &)> &closure)
+const
+{
+	for(const auto &chanp : chans)
+		if(chanp.second.users.has(user))
+			closure(chanp.second);
 }
 
 
