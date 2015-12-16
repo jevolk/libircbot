@@ -382,13 +382,13 @@ time_t secs_cast(const std::string &dur)
 		return lex_cast<time_t>(dur);
 
 	if(!isnumeric(dur.begin(),dur.begin()+dur.size()-1))
-		throw Exception("Improperly formatted duration: random non-numerics");
+		throw Assertive("Improperly formatted duration: random non-numerics");
 
-	const char &postfix = dur.at(dur.size() - 1);
+	const auto &postfix(dur.at(dur.size() - 1));
 	if(!std::isalpha(postfix,locale))
-		throw Exception("Improperly formatted duration: postfix must be a letter");
+		throw Assertive("Improperly formatted duration: postfix must be a letter");
 
-	time_t ret = lex_cast<time_t>(dur.substr(0,dur.size()-1));
+	auto ret(lex_cast<time_t>(dur.substr(0,dur.size()-1)));
 	switch(postfix)
 	{
 		case 'y':  ret *= 12;
@@ -398,8 +398,21 @@ time_t secs_cast(const std::string &dur)
 		case 'h':  ret *= 60;
 		case 'm':  ret *= 60;
 		case 's':  return ret;
-		default:   throw Exception("Duration postfix not recognized");
+		default:   throw Assertive("Duration postfix not recognized");
 	}
+}
+
+
+inline
+time_t secs_cast(const std::string &dur,
+                 const std::nothrow_t)
+try
+{
+	return secs_cast(dur);
+}
+catch(...)
+{
+	return 0;
 }
 
 
