@@ -296,7 +296,6 @@ struct Bot : public std::mutex
 	Bot(const Bot &) = delete;
 	Bot &operator=(Bot &&) = delete;
 	Bot &operator=(const Bot &) = delete;
-	~Bot(void) noexcept;
 
 	friend std::ostream &operator<<(std::ostream &s, const Bot &bot);
 };

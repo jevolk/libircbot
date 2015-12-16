@@ -57,19 +57,6 @@ catch(const Internal &e)
 }
 
 
-Bot::~Bot(void)
-noexcept try
-{
-
-
-}
-catch(const Internal &e)
-{
-	std::cerr << "Bot::~Bot(): " << e << std::endl;
-	return;
-}
-
-
 void Bot::init_state_handlers()
 {
 	namespace ph = std::placeholders;
@@ -249,7 +236,6 @@ void Bot::disconnect()
 	cancel_timer(true);
 	auto &sock(sess.get_socket());
 	sock.disconnect(opts["quit"] != "hard");
-	sess.unset(Flag::ALL);
 	state(State::INACTIVE);
 }
 
@@ -420,8 +406,9 @@ void Bot::enter_state_fault(const State &st)
 	sock.disconnect(false);
 	sock.clear();
 	sock.purge();
-
 	cancel_timer(true);
+	sess.unset(Flag::ALL);
+	connect();
 }
 
 
@@ -429,6 +416,7 @@ void Bot::enter_state_inactive(const State &st)
 {
 	log(st,"Entered INACTIVE");
 
+	sess.unset(Flag::ALL);
 }
 
 
