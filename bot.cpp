@@ -303,6 +303,7 @@ void Bot::set_handle(const std::shared_ptr<boost::asio::streambuf> buf)
 void Bot::handle_socket_ecb(const boost::system::error_code &e)
 {
 	const std::lock_guard<Bot> lock(*this);
+	set_tls_context();
 	auto &sock(sess.get_socket());
 	sess.set_current_exception();
 	sess.set(Flag::SOCKERR);
@@ -316,6 +317,7 @@ void Bot::handle_timeout(const boost::system::error_code &e)
 		return;
 
 	const std::lock_guard<Bot> lock(*this);
+	set_tls_context();
 	sess.set(Flag::TIMEOUT);
 	state(State::FAULT);
 }
@@ -329,6 +331,7 @@ void Bot::handle_conn(const boost::system::error_code &e)
 			return;
 
 		const std::lock_guard<Bot> lock(*this);
+		set_tls_context();
 		sess.set_exception(boost::system::system_error(e));
 		sess.set(Flag::SOCKERR);
 		state(State::FAULT);
@@ -336,6 +339,7 @@ void Bot::handle_conn(const boost::system::error_code &e)
 	}
 
 	const std::lock_guard<Bot> lock(*this);
+	set_tls_context();
 	sess.set(Flag::CONNECTED);
 	cancel_timer();
 	new_handle();
@@ -353,6 +357,7 @@ void Bot::handle_pck(const boost::system::error_code &e,
 			return;
 
 		const std::lock_guard<Bot> lock(*this);
+		set_tls_context();
 		sess.set_exception(boost::system::system_error(e));
 		sess.set(Flag::SOCKERR);
 		state(State::FAULT);
@@ -364,9 +369,9 @@ void Bot::handle_pck(const boost::system::error_code &e,
 
 	{
 		const std::lock_guard<Bot> lock(*this);
+		set_tls_context();
 		std::istream stream(buf.get());
 		const Msg msg(stream);
-		set_tls_context();
 		events.msg(msg);
 	}
 
