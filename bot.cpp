@@ -1359,8 +1359,14 @@ void Bot::handle_bannedfromchan(const Msg &msg)
 	Chan &chan(chans.get(msg[CHANNAME]));
 	events.chan(msg,chan);
 
-	if(chan.get_val<bool>("config.event.err_bannedfromchan.unban"))
+	if(chan.get_val("config.event.err_bannedfromchan.unban",false))
 		chan.unban();
+
+	if(chan.get_val("config.event.err_bannedfromchan.clear",false))
+		chan.csclear();
+
+	if(chan.get_val("config.event.err_bannedfromchan.recover",false))
+		chan.recover();
 }
 
 
