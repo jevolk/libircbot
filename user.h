@@ -66,8 +66,8 @@ class User : public Locutor,
 	explicit User(const std::string &nick, const std::string &host = {}, const std::string &acct = {});
 	User(User &&user) noexcept;
 	User(const User &user);
-	User &operator=(User &&) noexcept = default;
-	User &operator=(const User &) = default;
+	User &operator=(User &&) noexcept;
+	User &operator=(const User &);
 
 	friend std::ostream &operator<<(std::ostream &s, const User &u);
 };
@@ -122,6 +122,37 @@ chans(std::move(user.chans))
 
 
 inline
+User &User::operator=(const User &o)
+{
+	static_cast<Locutor &>(*this) = o;
+	host = o.host;
+	acct = o.acct;
+	secure = o.secure;
+	signon = o.signon;
+	idle = o.idle;
+	away = o.away;
+	chans = o.chans;
+	return *this;
+}
+
+
+inline
+User &User::operator=(User &&o)
+noexcept
+{
+	static_cast<Locutor &>(*this) = std::move(o);
+	host = std::move(o.host);
+	acct = std::move(o.acct);
+	secure = std::move(o.secure);
+	signon = std::move(o.signon);
+	idle = std::move(o.idle);
+	away = std::move(o.away);
+	chans = std::move(o.chans);
+	return *this;
+}
+
+
+inline
 void User::info()
 {
 	Service &ns(get_ns());
@@ -151,7 +182,7 @@ inline
 bool User::is_logged_in()
 const
 {
-	return !acct.empty() && acct != "0" && acct != "*";
+	return acct.size() > 0 && acct.at(0) != '0' && acct.at(0) != '*';
 }
 
 
