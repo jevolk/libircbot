@@ -827,10 +827,17 @@ void Bot::handle_mode(const Msg &msg)
 
 		// Target is a straight nickname, we find the user in this case
 		// TODO: find the user based on other matches?
-		if(std::get<d.MASK>(d) == Mask::INVALID)
+		if(std::get<d.MASK>(d) == Mask::INVALID) try
 		{
 			User &user(users.get(std::get<d.MASK>(d)));
 			events.chan_user(msg,chan,user);
+		}
+		catch(const std::exception &e)
+		{
+			std::cerr << "Mode update failed: chan_user: " << chan.get_name()
+		              << " (modestr: " << msg[DELTASTR] << ")"
+		              << ": " << e.what()
+		              << std::endl;
 		}
 	}
 	catch(const std::exception &e)

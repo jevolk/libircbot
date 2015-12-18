@@ -681,13 +681,18 @@ try
 	}
 
 	// Target is a straight nickname, not a Mask
-	if(mask == Mask::INVALID)
+	if(mask == Mask::INVALID) try
 	{
 		users.mode(mask) += delta;
 		if(mask == get_my_nick() && sign && mode == 'o')
 			event_opped();
 
 		return true;
+	}
+	catch(const std::exception &e)
+	{
+		std::cerr << "Exception in set_mode: " << e.what() << std::endl;
+		return false;
 	}
 
 	return lists.set_mode(delta);
