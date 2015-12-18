@@ -764,7 +764,7 @@ void Bot::handle_part(const Msg &msg)
 
 	if(user.is_myself())
 	{
-		if(chan.get_val<bool>("config.event.part.rejoin"))
+		if(chan.get_val("config.event.part.rejoin",false))
 		{
 			// We have parted and rejoin = 1, so always rejoin
 			chans.del(msg[CHANNAME]);
@@ -774,7 +774,7 @@ void Bot::handle_part(const Msg &msg)
 
 		const auto toks(tokens(msg[REASON]));
 		const bool req(toks.size() >= 3 && toks.at(0) == "requested" && toks.at(1) == "by");
-		if(req && chan.get_val<bool>("config.event.part.rejoin_removed"))
+		if(req && chan.get_val("config.event.part.rejoin_removed",false))
 		{
 			// Rejoin when we have been force removed
 			const auto &remover(toks.at(2));
@@ -1054,7 +1054,7 @@ void Bot::handle_kick(const Msg &msg)
 	events.chan_user(msg,chan,user);
 	events.chan(msg,chan);
 
-	if(sess.get_nick() == kickee && chan.get_val<bool>("config.event.kick.rejoin"))
+	if(sess.get_nick() == kickee && chan.get_val("config.event.kick.rejoin",true))
 	{
 		// We have been kicked and rejoin = 1
 		chans.del(msg[CHANNAME]);

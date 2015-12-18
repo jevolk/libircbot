@@ -27,6 +27,8 @@ class Acct
 	Adoc operator[](const std::string &key)             { return get(key);                          }
 
 	// Get value of document
+	template<class T = std::string> T get_val(const std::string &key, const T &def) const;
+	template<class T = std::string> T get_val(const std::string &key, const T &def);
 	template<class T = std::string> T get_val(const std::string &key) const;
 	template<class T = std::string> T get_val(const std::string &key);
 
@@ -79,8 +81,7 @@ void Acct::set(const std::string &key,
 template<class T>
 T Acct::get_val(const std::string &key)
 {
-	const Adoc doc(get(key));
-	return doc.get_value<T>(T());
+	return get_val(key,T{});
 }
 
 
@@ -88,6 +89,24 @@ template<class T>
 T Acct::get_val(const std::string &key)
 const
 {
+	return get_val(key,T{});
+}
+
+
+template<class T>
+T Acct::get_val(const std::string &key,
+                const T &def)
+{
 	const Adoc doc(get(key));
-	return doc.get_value<T>(T());
+	return doc.get_value<T>(def);
+}
+
+
+template<class T>
+T Acct::get_val(const std::string &key,
+                const T &def)
+const
+{
+	const Adoc doc(get(key));
+	return doc.get_value<T>(def);
 }
