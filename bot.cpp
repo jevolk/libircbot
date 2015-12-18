@@ -1316,7 +1316,7 @@ void Bot::handle_namreply(const Msg &msg)
 	for(const auto &nick : tokens(msg[NAMELIST]))
 	{
 		auto modes(chan::nick_prefix(serv,nick));
-		std::transform(modes.begin(),modes.end(),modes.begin(),[&]
+		std::transform(modes.begin(),modes.end(),modes.begin(),[&serv]
 		(const char &prefix)
 		{
 			return serv.prefix_to_mode(prefix);
@@ -1324,7 +1324,7 @@ void Bot::handle_namreply(const Msg &msg)
 
 		const auto &raw_nick(nick.substr(modes.size()));
 		User &user(users.add(raw_nick));
-		if(chan.users.add(user,modes))
+		if(chan.users.add(user,Mode(modes)))
 			user.inc_chans();
 	}
 

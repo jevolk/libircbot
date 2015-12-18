@@ -101,7 +101,7 @@ Adoc &Adoc::merge(const Adoc &src)
 
 			if(!sub.empty())
 			{
-				Adoc child(dst.get_child(key,Adoc()));
+				Adoc child(dst.get_child(key,Adoc{}));
 				recurse(sub,child);
 
 				if(key.empty())

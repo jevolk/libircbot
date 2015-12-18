@@ -35,8 +35,9 @@ struct Mode : std::string
 	template<class T> Mode operator-(T&& m);      // rm()
 
 	Mode(void) = default;
-	Mode(const std::string &mode);
+	explicit Mode(const std::string &mode);
 	Mode(const char &mode): std::string(1,mode) {}
+	Mode(const char *const &mode): Mode(std::string(mode)) {}
 	explicit Mode(const Delta &d): Mode(std::get<d.MODE>(d)) {}
 };
 

@@ -21,8 +21,8 @@ class Acct
 	// Get document
 	Adoc get() const                                    { return adb->get(std::nothrow,get_acct()); }
 	Adoc get()                                          { return adb->get(std::nothrow,get_acct()); }
-	Adoc get(const std::string &key) const              { return get().get_child(key,Adoc());       }
-	Adoc get(const std::string &key)                    { return get().get_child(key,Adoc());       }
+	Adoc get(const std::string &key) const              { return get().get_child(key,Adoc{});       }
+	Adoc get(const std::string &key)                    { return get().get_child(key,Adoc{});       }
 	Adoc operator[](const std::string &key) const       { return get(key);                          }
 	Adoc operator[](const std::string &key)             { return get(key);                          }
 
