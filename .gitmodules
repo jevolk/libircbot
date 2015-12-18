@@ -1,3 +1,6 @@
 [submodule "stldb"]
 	path = stldb
 	url = https://github.com/jevolk/stldb.git
+[submodule "ircd-seven"]
+	path = ircd-seven
+	url = https://github.com/freenode/ircd-seven.git

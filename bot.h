@@ -37,12 +37,13 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio.hpp>
 
-// ircclient
-#include <libirc_rfcnumeric.h>
-
 // leveldb
 #include <stldb/stldb.h>
 
+// dry
+#define INCLUDED_config_h
+#include "ircd-seven/include/numeric.h"
+#undef INCLUDED_config_h
 
 // irc::bot
 namespace irc {
