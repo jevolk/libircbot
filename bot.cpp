@@ -168,6 +168,7 @@ void Bot::init_irc_handlers()
 	EVENT( ERR_MLOCKRESTRICTED, handle_modeislocked)
 	EVENT( ERR_MONLISTFULL, handle_monlistfull)
 	EVENT( ERR_ACCEPTFULL, handle_acceptfull)
+	EVENT( ERR_CHANNELISFULL, handle_channelisfull)
 	EVENT( ERR_ACCEPTEXIST, handle_acceptexist)
 	EVENT( ERR_ACCEPTNOT, handle_acceptnot)
 	EVENT( ERR_NOSUCHNICK, handle_nosuchnick)
@@ -1367,6 +1368,17 @@ void Bot::handle_bannedfromchan(const Msg &msg)
 
 	if(chan.get_val("config.event.err_bannedfromchan.recover",false))
 		chan.recover();
+}
+
+
+void Bot::handle_channelisfull(const Msg &msg)
+{
+	log(msg,"CHANNELISFULL");
+
+	using namespace fmt::CHANNELISFULL;
+
+	sleep(1);
+	chans.join(msg[CHANNAME]);
 }
 
 
