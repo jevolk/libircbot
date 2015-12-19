@@ -732,9 +732,8 @@ try
 }
 catch(const Exception &e)
 {
-	// Ignore user's absence from channel, though this shouldn't happen.
 	std::cerr << "Chan: " << get_name() << " "
-	          << "set_mode: " << d << " "
+	          << "set_mode: [" << d << "] "
 	          << e << std::endl;
 
 	return false;

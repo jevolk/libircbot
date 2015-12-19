@@ -302,7 +302,7 @@ Delta::Type Delta::type(const Server &serv,
 	for(; i < 4; ++i)
 		if(cm.size() > i && cm.at(i).find(mode) != std::string::npos)
 			break;
-		else if(i == 1 && serv.has_prefix(mode))
+		else if(i == 1 && serv.has_prefix_mode(mode))
 			break;
 
 	return Type(i);

@@ -27,25 +27,12 @@ struct Server
 
 	// 3.14 PREFIX
 	bool has_prefix(const char &prefix) const;
+	bool has_prefix_mode(const char &mode) const;
 	char prefix_to_mode(const char &prefix) const;
 	char mode_to_prefix(const char &mode) const;
 
 	friend std::ostream &operator<<(std::ostream &s, const Server &srv);
 };
-
-
-inline
-bool Server::has_prefix(const char &prefix)
-const try
-{
-	const auto &pxs(isupport["PREFIX"]);
-	const auto pfx(split(pxs,")").second);
-	return pfx.find(prefix) != std::string::npos;
-}
-catch(const std::out_of_range &e)
-{
-	throw Exception("PREFIX was not stocked by an ISUPPORT message.");
-}
 
 
 inline
@@ -69,6 +56,34 @@ const
 	const auto prefx(split(pxs,")").second);
 	const auto pos(prefx.find(mode));
 	return pos != std::string::npos? modes.at(pos) : '\0';
+}
+
+
+inline
+bool Server::has_prefix(const char &prefix)
+const try
+{
+	const auto &pxs(isupport["PREFIX"]);
+	const auto pfx(split(pxs,")").second);
+	return pfx.find(prefix) != std::string::npos;
+}
+catch(const std::out_of_range &e)
+{
+	throw Exception("PREFIX was not stocked by an ISUPPORT message.");
+}
+
+
+inline
+bool Server::has_prefix_mode(const char &mode)
+const try
+{
+	const auto &pxs(isupport["PREFIX"]);
+	const auto pfx(split(pxs,")").first);
+	return pfx.find(mode) != std::string::npos;
+}
+catch(const std::out_of_range &e)
+{
+	throw Exception("PREFIX was not stocked by an ISUPPORT message.");
 }
 
 
