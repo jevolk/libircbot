@@ -48,16 +48,15 @@ try
 	if(ms.empty() || (Delta::is_sign(ms.at(0)) && ms.size() == 1))
 		return;
 
-	bool sign(Delta::sign(ms.at(0)));
-	for(size_t i = 0, a = 1; i < ms.size(); i++)
+	auto sign(Delta::sign(ms.at(0)));
+	for(size_t i(0), a(1); i < ms.size(); i++)
 	{
 		if(Delta::is_sign(ms.at(i)))
 			sign = Delta::sign(ms.at(i++));
 
-		const char &mode(ms.at(i));
-		const bool has_arg(serv? serv->chan_pmodes.find(mode) != std::string::npos : tok.size() > a);
-		const auto &arg(has_arg? tok.at(a++) : "");
-		emplace_back(sign,mode,arg);
+		const auto &mode(ms.at(i));
+		const auto has_arg(serv? Delta::has_arg(*serv,mode,sign) : tok.size() > a);
+		emplace_back(sign,mode,has_arg? tok.at(a++) : std::string{});
 	}
 }
 catch(const std::out_of_range &e)
@@ -71,7 +70,7 @@ Deltas Deltas::operator~()
 &&
 {
 	for(auto &d : *this)
-		std::get<Delta::SIGN>(d) =! std::get<Delta::SIGN>(d);
+		std::get<d.SIGN>(d) =! std::get<d.SIGN>(d);
 
 	return std::move(*this);
 }
@@ -83,7 +82,7 @@ const &
 {
 	Deltas ret(*this);
 	for(auto &d : ret)
-		std::get<Delta::SIGN>(d) =! std::get<Delta::SIGN>(d);
+		std::get<d.SIGN>(d) =! std::get<d.SIGN>(d);
 
 	return ret;
 }
@@ -93,7 +92,7 @@ inline
 Deltas &Deltas::set_signs(const bool &sign)
 {
 	for(auto &d : *this)
-		std::get<Delta::SIGN>(d) = sign;
+		std::get<d.SIGN>(d) = sign;
 
 	return *this;
 }
@@ -138,7 +137,7 @@ const
 	return std::all_of(begin(),end(),[&sign]
 	(const Delta &d)
 	{
-		return std::get<Delta::SIGN>(d) == sign;
+		return std::get<d.SIGN>(d) == sign;
 	});
 }
 
@@ -150,7 +149,7 @@ const
 	return std::all_of(begin(),end(),[&mode]
 	(const Delta &d)
 	{
-		return std::get<Delta::MODE>(d) == mode;
+		return std::get<d.MODE>(d) == mode;
 	});
 }
 
@@ -162,7 +161,7 @@ const
 	return std::all_of(begin(),end(),[&mask]
 	(const Delta &d)
 	{
-		return std::get<Delta::MASK>(d) == mask;
+		return std::get<d.MASK>(d) == mask;
 	});
 }
 
@@ -184,14 +183,14 @@ const
 
 	for(auto it(begin); it != end; ++it)
 	{
-		const auto &d = *it;
-		s << d.sign(std::get<Delta::SIGN>(d)) << std::get<Delta::MODE>(d);
+		const auto &d(*it);
+		s << d.sign(std::get<d.SIGN>(d)) << std::get<d.MODE>(d);
 	}
 
 	for(auto it(begin); it != end; ++it)
 	{
-		const auto &d = *it;
-		s << " " << std::get<Delta::MASK>(d);
+		const auto &d(*it);
+		s << " " << std::get<d.MASK>(d);
 	}
 
 	return s.str();

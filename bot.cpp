@@ -830,25 +830,18 @@ void Bot::handle_mode(const Msg &msg)
 		chan.set_mode(d);
 		events.chan(msg,chan);
 
-		// Target is a straight nickname, we find the user in this case
-		// TODO: find the user based on other matches?
-		if(std::get<d.MASK>(d) == Mask::INVALID) try
+		// Target is a straight nickname, find the user in this case
+		if(serv.has_prefix(std::get<d.MODE>(d)) && std::get<d.MASK>(d) == Mask::INVALID)
 		{
 			User &user(users.get(std::get<d.MASK>(d)));
 			events.chan_user(msg,chan,user);
-		}
-		catch(const std::exception &e)
-		{
-			std::cerr << "Mode update failed: chan_user: " << chan.get_name()
-		              << " (modestr: " << msg[DELTASTR] << ")"
-		              << ": " << e.what()
-		              << std::endl;
 		}
 	}
 	catch(const std::exception &e)
 	{
 		std::cerr << "Mode update failed: chan: " << chan.get_name()
-		          << " (modestr: " << msg[DELTASTR] << ")"
+		          << " (delta: " << d << ")"
+		          << " (deltas: " << deltas << ")"
 		          << ": " << e.what()
 		          << std::endl;
 	}
@@ -903,9 +896,9 @@ void Bot::handle_channelmodeis(const Msg &msg)
 
 	log(msg,"CHANNELMODEIS");
 
-	const Server &serv(sess.get_server());
 	Chan &chan(chans.get(msg[CHANNAME]));
-	const Deltas deltas(msg[DELTASTR],serv);
+	const Server &serv(sess.get_server());
+	const Deltas deltas(detok(msg.begin()+DELTASTR,msg.end()),serv);
 	for(const auto &delta : deltas)
 		chan.set_mode(delta);
 

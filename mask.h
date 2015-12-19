@@ -9,7 +9,7 @@
 struct Mask : std::string
 {
 	enum Form                             { INVALID, CANONICAL, EXTENDED                          };
-	enum Type                             { NICK, HOST, ACCT                                      };
+	enum Type                             { NICK, USER, HOST, ACCT, JOIN, GECOS, FULL, SSL        };
 
 	auto num(const char &c) const         { return std::count(begin(),end(),c);                   }
 	bool has(const char &c) const         { return find(c) != std::string::npos;                  }
@@ -20,10 +20,8 @@ struct Mask : std::string
 	std::string get_host() const          { return substr(find('@')+1,npos);                      }
 
 	bool has_ident() const                { return !has('~');                                     }
-	bool has_wild_nick() const            { return get_nick() == "*";                             }
-	bool has_wild_user() const            { return get_user() == "*";                             }
-	bool has_wild_host() const            { return get_host() == "*";                             }
 	bool has_all_wild() const             { return std::string(*this) == "*!*@*";                 }
+	bool has_wild(const Type &t) const;
 	bool is_canonical() const;
 
 	// Extended mask utils
@@ -79,4 +77,18 @@ const
 	       !get_nick().empty() &&
 	       !get_user().empty() &&
 	       !get_host().empty();
+}
+
+
+inline
+bool Mask::has_wild(const Type &t)
+const
+{
+	switch(t)
+	{
+		case NICK:   return get_nick() == "*";
+		case USER:   return get_user() == "*";
+		case HOST:   return get_host() == "*";
+		default:     return false;
+	}
 }

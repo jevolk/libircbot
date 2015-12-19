@@ -17,6 +17,7 @@ using Info = std::map<std::string, std::string>;
 using Topic = std::tuple<std::string, Mask, time_t>;
 using Lambda = std::function<void (Chan &)>;
 using Lambdas = std::forward_list<Lambda>;
+using JoinThrottle = std::pair<uint,time_t>;
 
 Type type(const char &c);
 std::string nick_prefix(const Server &serv, const std::string &nick);
@@ -31,6 +32,9 @@ class Chan : public Locutor,
 	Mode _mode;                                             // Channel's mode state
 	time_t creation;                                        // Timestamp for channel from server
 	std::string pass;                                       // passkey for channel
+	std::string forward;                                    // forward channel
+	JoinThrottle join_throttle;                             // join throttle +j users:seconds
+	uint limit;                                             // users +l limit
 	Topic _topic;                                           // Topic state
 	Info info;                                              // ChanServ info response
 	Deltas opdo_deltas;                                     // OpDo Delta queue
@@ -45,6 +49,9 @@ class Chan : public Locutor,
 	auto &get_mode() const                                  { return _mode;                         }
 	auto &get_creation() const                              { return creation;                      }
 	auto &get_pass() const                                  { return pass;                          }
+	auto &get_forward() const                               { return forward;                       }
+	auto &get_join_throttle() const                         { return join_throttle;                 }
+	auto &get_limit() const                                 { return limit;                         }
 	auto &get_topic() const                                 { return _topic;                        }
 	auto &get_info() const                                  { return info;                          }
 	auto &get_opdo_deltas() const                           { return opdo_deltas;                   }
@@ -60,6 +67,8 @@ class Chan : public Locutor,
 	bool run_opdo();
 	void fetch_oplists();
 	void event_opped();                                     // We have been opped up
+	bool set_user_mode(const Delta &d);
+	bool set_join_throttle(const Delta &d);
 
   public:
 	void set_joined(const bool &joined)                     { this->joined = joined;                }
@@ -144,7 +153,9 @@ Locutor(name),
 Acct(&Locutor::get_target()),
 joined(false),
 creation(0),
-pass(pass)
+pass(pass),
+join_throttle{0,0},
+limit(0)
 {
 }
 
@@ -157,6 +168,9 @@ joined(chan.joined),
 _mode(chan._mode),
 creation(chan.creation),
 pass(chan.pass),
+forward(chan.forward),
+join_throttle(chan.join_throttle),
+limit(chan.limit),
 _topic(chan._topic),
 info(chan.info),
 opdo_deltas(chan.opdo_deltas),
@@ -176,6 +190,9 @@ joined(std::move(chan.joined)),
 _mode(std::move(chan._mode)),
 creation(std::move(chan.creation)),
 pass(std::move(chan.pass)),
+forward(std::move(chan.forward)),
+join_throttle(std::move(chan.join_throttle)),
+limit(std::move(chan.limit)),
 _topic(std::move(chan._topic)),
 info(std::move(chan.info)),
 opdo_deltas(std::move(chan.opdo_deltas)),
@@ -666,44 +683,94 @@ void Chan::who(const std::string &flags)
 
 
 inline
-bool Chan::set_mode(const Delta &delta)
+bool Chan::set_mode(const Delta &d)
 try
 {
-	const auto &mask(std::get<Delta::MASK>(delta));
-	const auto &sign(std::get<Delta::SIGN>(delta));
-	const auto &mode(std::get<Delta::MODE>(delta));
+	using std::get;
 
-	// Mode is for channel (TODO: special arguments)
-	if(mask.empty())
+	const auto &sess(get_sess());
+	const auto &serv(sess.get_server());
+	switch(d.type(serv))
 	{
-		_mode += delta;
-		return true;
-	}
+		case Delta::Type::A:
+			return lists.set_mode(d);
 
-	// Target is a straight nickname, not a Mask
-	if(mask == Mask::INVALID) try
-	{
-		users.mode(mask) += delta;
-		if(mask == get_my_nick() && sign && mode == 'o')
-			event_opped();
+		case Delta::Type::B: switch(get<d.MODE>(d))
+		{
+			case 'k':
+				return true;
 
-		return true;
-	}
-	catch(const std::exception &e)
-	{
-		std::cerr << "Exception in set_mode: " << e.what() << std::endl;
-		return false;
-	}
+			default:
+				if(get<d.MASK>(d) == Mask::INVALID)
+					return set_user_mode(d);
 
-	return lists.set_mode(delta);
+				return false;
+		}
+
+		case Delta::Type::C: switch(get<d.MODE>(d))
+		{
+			case 'l':
+				limit = bool(d)? lex_cast<uint>(get<d.MASK>(d)) : 0U;
+				return true;
+
+			case 'f':
+				forward = bool(d)? get<d.MASK>(d) : Mask{};
+				return true;
+
+			case 'j':
+				return set_join_throttle(d);
+
+			default:
+				return false;
+		}
+
+		default:
+		case Delta::Type::D:
+			_mode += d;
+			return true;
+	}
 }
 catch(const Exception &e)
 {
 	// Ignore user's absence from channel, though this shouldn't happen.
 	std::cerr << "Chan: " << get_name() << " "
-	          << "set_mode: " << delta << " "
+	          << "set_mode: " << d << " "
 	          << e << std::endl;
 
+	return false;
+}
+
+
+inline
+bool Chan::set_join_throttle(const Delta &d)
+{
+	if(bool(d))
+	{
+		const auto arg(split(std::get<d.MASK>(d),":"));
+		join_throttle.first = lex_cast<uint>(arg.first);
+		join_throttle.second = lex_cast<time_t>(arg.second);
+	}
+	else join_throttle = {0,0};
+
+	return true;
+}
+
+
+inline
+bool Chan::set_user_mode(const Delta &d)
+try
+{
+	using std::get;
+
+	users.mode(get<d.MASK>(d)) += d;
+	if(get<d.MASK>(d) == get_my_nick() && get<d.SIGN>(d) && get<d.MODE>(d) == 'o')
+		event_opped();
+
+	return true;
+}
+catch(const std::out_of_range &e)
+{
+	std::cerr << get_name() << " set_user_mode(" << d << ") failed" << std::endl;
 	return false;
 }
 
@@ -888,6 +955,9 @@ std::ostream &operator<<(std::ostream &s,
 {
 	s << "name:       \t" << c.get_name() << std::endl;
 	s << "passkey:    \t" << c.get_pass() << std::endl;
+	s << "forward:    \t" << c.get_forward() << std::endl;
+	s << "jthrottle:  \t" << c.get_join_throttle().first << ":" << c.get_join_throttle().second << std::endl;
+	s << "limit:      \t" << c.get_limit() << std::endl;
 	s << "mode:       \t" << c.get_mode() << std::endl;
 	s << "creation:   \t" << c.get_creation() << std::endl;
 	s << "joined:     \t" << std::boolalpha << c.is_joined() << std::endl;

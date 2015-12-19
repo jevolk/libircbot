@@ -235,6 +235,9 @@ const
 
 			s << "$a:" << get_acct();
 			break;
+
+		default:
+			break;
 	}
 
 	return s.str();
