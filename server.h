@@ -31,8 +31,175 @@ struct Server
 	char prefix_to_mode(const char &prefix) const;
 	char mode_to_prefix(const char &mode) const;
 
+	// Delta/mode rules and validations
+	Delta::Type mode_type(const char &mode) const;
+	Delta::Type mode_type(const Delta &delta) const;
+	bool mode_has_arg(const char &mode, const bool &sign) const;
+	bool mode_has_invmask(const char &m) const;
+	bool need_mask(const Delta &d) const;
+	bool user_mode(const char &m) const;
+	bool user_mode(const Delta &d) const;
+	bool chan_mode(const char &m) const;
+	bool chan_mode(const Delta &d) const;
+	const char *valid_arg(const Delta &delta) const;                     // static string on invalid, else null
+	const char *valid(const Delta &delta, const std::nothrow_t) const;   // static string on invalid, else null
+	void valid(const Delta &delta) const;                                // throws reason for invalid
+
 	friend std::ostream &operator<<(std::ostream &s, const Server &srv);
 };
+
+
+
+inline
+void Server::valid(const Delta &d)
+const
+{
+	const auto reason(valid(d,std::nothrow));
+
+	if(reason)
+		throw Exception(reason);
+}
+
+
+inline
+const char *Server::valid(const Delta &d,
+                          const std::nothrow_t)
+const
+{
+	if(!user_mode(d) && !chan_mode(d))
+		return "Mode is not valid on this server.";
+
+	return valid_arg(d);
+}
+
+
+inline
+const char *Server::valid_arg(const Delta &d)
+const
+{
+	using std::get;
+
+	if(get<d.MASK>(d).empty() && need_mask(d))
+		return "Mode requries an argument.";
+
+	if(!get<d.MASK>(d).empty() && !need_mask(d))
+		return "Mode requires no argument.";
+
+	if(!mode_has_invmask(get<d.MODE>(d)) && get<d.MASK>(d) == Mask::INVALID)
+		return "Mode requires a valid mask argument.";
+
+	switch(get<d.MODE>(d))
+	{
+		case 'l':   return isnumeric(get<d.MASK>(d))? nullptr : "argument must be numeric.";
+		case 'j':
+		{
+			const auto arg(split(get<d.MASK>(d),":"));
+			return arg.first.empty() || !isnumeric(arg.first)?    "join throttle user count invalid.":
+			       arg.second.empty() || !isnumeric(arg.second)?  "join throttle seconds count invalid.":
+			                                                      nullptr;
+		}
+
+		default:    return nullptr;
+	}
+}
+
+
+inline
+bool Server::need_mask(const Delta &d)
+const
+{
+	return mode_has_arg(std::get<d.MODE>(d),std::get<d.SIGN>(d));
+}
+
+
+inline
+bool Server::chan_mode(const Delta &d)
+const
+{
+	return chan_mode(std::get<d.MODE>(d));
+}
+
+
+inline
+bool Server::chan_mode(const char &m)
+const
+{
+	return chan_modes.find(m) != std::string::npos ||
+	       chan_pmodes.find(m) != std::string::npos;
+}
+
+
+inline
+bool Server::user_mode(const Delta &d)
+const
+{
+	return user_mode(std::get<d.MODE>(d));
+}
+
+
+inline
+bool Server::user_mode(const char &m)
+const
+{
+	return user_modes.find(m) != std::string::npos ||
+	       user_pmodes.find(m) != std::string::npos;
+}
+
+
+inline
+bool Server::mode_has_invmask(const char &m)
+const
+{
+	switch(m)
+	{
+		case 'o':
+		case 'v':
+		case 'l':
+		case 'j':
+		case 'f':  return true;
+		default:   return false;
+	}
+}
+
+
+inline
+bool Server::mode_has_arg(const char &mode,
+                          const bool &sign)
+const
+{
+	switch(mode_type(mode))
+	{
+		case Delta::Type::A:     return true;
+		case Delta::Type::B:     return true;
+		case Delta::Type::C:     return sign;
+		default:
+		case Delta::Type::D:     return false;
+	}
+}
+
+
+inline
+Delta::Type Server::mode_type(const Delta &d)
+const
+{
+	return mode_type(std::get<d.MODE>(d));
+}
+
+
+inline
+Delta::Type Server::mode_type(const char &mode)
+const
+{
+	size_t i(0);
+	const auto cm(tokens(isupport["CHANMODES"],","));
+	for(; i < 4; ++i)
+		if(cm.size() > i && cm.at(i).find(mode) != std::string::npos)
+			break;
+		else if(i == 1 && has_prefix_mode(mode))
+			break;
+
+	return Delta::Type(i);
+}
 
 
 inline
@@ -61,29 +228,19 @@ const
 
 inline
 bool Server::has_prefix(const char &prefix)
-const try
+const
 {
-	const auto &pxs(isupport["PREFIX"]);
-	const auto pfx(split(pxs,")").second);
-	return pfx.find(prefix) != std::string::npos;
-}
-catch(const std::out_of_range &e)
-{
-	throw Exception("PREFIX was not stocked by an ISUPPORT message.");
+	return prefix_to_mode(prefix) != '\0';
 }
 
 
 inline
 bool Server::has_prefix_mode(const char &mode)
-const try
+const
 {
 	const auto &pxs(isupport["PREFIX"]);
-	const auto pfx(split(pxs,")").first);
-	return pfx.find(mode) != std::string::npos;
-}
-catch(const std::out_of_range &e)
-{
-	throw Exception("PREFIX was not stocked by an ISUPPORT message.");
+	const auto modes(between(pxs,"(",")"));
+	return modes.find(mode) != std::string::npos;
 }
 
 

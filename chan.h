@@ -690,7 +690,7 @@ try
 
 	const auto &sess(get_sess());
 	const auto &serv(sess.get_server());
-	switch(d.type(serv))
+	switch(serv.mode_type(d))
 	{
 		case Delta::Type::A:
 			return lists.set_mode(d);

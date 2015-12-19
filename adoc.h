@@ -6,7 +6,7 @@
  */
 
 
-struct Adoc : public boost::property_tree::ptree
+struct Adoc : boost::property_tree::ptree
 {
 	operator std::string() const;
 

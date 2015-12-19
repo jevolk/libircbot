@@ -8,29 +8,20 @@
 
 struct Deltas : std::vector<Delta>
 {
+	operator std::string() const                 { return string(*this);                           }
+
 	bool all(const bool &sign) const;
 	bool all(const char &mode) const;
 	bool all(const Mask &mask) const;
 
-	bool too_many(const Server &s) const         { return size() > s.isupport.get_or_max("MODES"); }
-	void validate_chan(const Server &s) const;
-	void validate_user(const Server &s) const;
-
 	std::string substr(const const_iterator &begin, const const_iterator &end) const;
-	operator std::string() const;
-
-	template<class... T> Deltas &operator<<(T&&... t);
 	Deltas &set_signs(const bool &sign);
-	Deltas operator~() const &;                  // invert the signs
-	Deltas operator~() &&;                       // invert the signs
 
-	Deltas() = default;
-	Deltas(std::vector<Delta> &&vec):       std::vector<Delta>(std::move(vec)) {}
-	Deltas(const std::vector<Delta> &vec):  std::vector<Delta>(vec) {}
-
-	//NOTE: Modes with arguments must only be chan_pmodes for now
-	Deltas(const std::string &delts, const Server *const &serv = nullptr);
-	Deltas(const std::string &delts, const Server &serv): Deltas(delts,&serv) {}
+	Deltas(void) = default;
+	Deltas(std::vector<Delta> &&vec): std::vector<Delta>(std::move(vec)) {}
+	Deltas(const std::vector<Delta> &vec): std::vector<Delta>(vec) {}
+	Deltas(const std::string &delts, const Server *const &serv = nullptr, const bool &valid = false);
+	Deltas(const std::string &delts, const Server &serv, const bool &valid = false): Deltas(delts,&serv,valid) {}
 
 	friend std::ostream &operator<<(std::ostream &s, const Deltas &d);
 };
@@ -38,7 +29,8 @@ struct Deltas : std::vector<Delta>
 
 inline
 Deltas::Deltas(const std::string &delts,
-               const Server *const &serv)
+               const Server *const &serv,
+               const bool &valid)
 try
 {
 	const auto tok(tokens(delts));
@@ -55,36 +47,17 @@ try
 			sign = Delta::sign(ms.at(i++));
 
 		const auto &mode(ms.at(i));
-		const auto has_arg(serv? Delta::has_arg(*serv,mode,sign) : tok.size() > a);
+		const auto has_arg(serv? serv->mode_has_arg(mode,sign) : tok.size() > a);
 		emplace_back(sign,mode,has_arg? tok.at(a++) : std::string{});
 	}
+
+	if(serv && valid)
+		for(const auto &delta : *this)
+			serv->valid(delta);
 }
 catch(const std::out_of_range &e)
 {
 	throw Exception("Improperly formatted deltas string.");
-}
-
-
-inline
-Deltas Deltas::operator~()
-&&
-{
-	for(auto &d : *this)
-		std::get<d.SIGN>(d) =! std::get<d.SIGN>(d);
-
-	return std::move(*this);
-}
-
-
-inline
-Deltas Deltas::operator~()
-const &
-{
-	Deltas ret(*this);
-	for(auto &d : ret)
-		std::get<d.SIGN>(d) =! std::get<d.SIGN>(d);
-
-	return ret;
 }
 
 
@@ -95,38 +68,6 @@ Deltas &Deltas::set_signs(const bool &sign)
 		std::get<d.SIGN>(d) = sign;
 
 	return *this;
-}
-
-
-template<class... T>
-Deltas &Deltas::operator<<(T&&... t)
-{
-	emplace_back(std::forward<T>(t)...);
-	return *this;
-}
-
-
-inline
-void Deltas::validate_user(const Server &s)
-const
-{
-	if(too_many(s))
-		throw Exception("Server doesn't support changing this many modes at once.");
-
-	for(const Delta &delta : *this)
-		delta.validate_user(s);
-}
-
-
-inline
-void Deltas::validate_chan(const Server &s)
-const
-{
-	if(too_many(s))
-		throw Exception("Server doesn't support changing this many modes at once.");
-
-	for(const Delta &delta : *this)
-		delta.validate_chan(s);
 }
 
 
@@ -167,14 +108,6 @@ const
 
 
 inline
-Deltas::operator std::string()
-const
-{
-	return string(*this);
-}
-
-
-inline
 std::string Deltas::substr(const Deltas::const_iterator &begin,
                            const Deltas::const_iterator &end)
 const
@@ -198,9 +131,49 @@ const
 
 
 inline
-std::ostream &operator<<(std::ostream &s,
-                         const Deltas &deltas)
+std::ostream &operator<<(std::ostream &s, const Deltas &deltas)
 {
 	s << deltas.substr(deltas.begin(),deltas.end());
 	return s;
+}
+
+
+inline
+Deltas operator~(Deltas &&deltas)
+{
+	for(auto &d : deltas)
+		std::get<d.SIGN>(d) =! std::get<d.SIGN>(d);
+
+	return std::move(deltas);
+}
+
+
+inline
+Deltas operator~(const Deltas &deltas)
+{
+	Deltas ret(deltas);
+	for(auto &r : ret)
+		std::get<r.SIGN>(r) =! std::get<r.SIGN>(r);
+
+	return ret;
+}
+
+
+inline
+bool too_many(const Server &s,
+              const Deltas &deltas)
+{
+	return deltas.size() > s.isupport.get_or_max("MODES");
+}
+
+
+inline
+void valid(const Server &s,
+           const Deltas &deltas)
+{
+	if(too_many(s,deltas))
+		throw Exception("Server doesn't support changing this many modes at once.");
+
+	for(const Delta &d : deltas)
+		s.valid(d);
 }

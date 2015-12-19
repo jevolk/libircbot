@@ -62,13 +62,15 @@ namespace colors
 #include "util.h"
 #include "opts.h"
 #include "mask.h"
-#include "throttle.h"
+#include "delta.h"
 #include "isupport.h"
 #include "server.h"
-#include "delta.h"
 #include "deltas.h"
 #include "mode.h"
 #include "ban.h"
+using Quiet = Ban;
+using Except = Ban;
+using Invite = Ban;
 #include "flags.h"
 #include "akick.h"
 #include "adoc.h"
@@ -93,6 +95,7 @@ namespace recvq
 {
 	#include "recvq.h"
 }
+#include "throttle.h"
 #include "socket.h"
 #include "sess.h"
 extern thread_local Sess *sess;

@@ -19,13 +19,13 @@ struct Locutor : Stream
 	enum MethodEx
 	{
 		NONE,
-		CMSG,                                           // automatic when:  user << chan << ""
+		CMSG,
 		WALLCHOPS,
 		WALLVOICE,
 	};
 
-	static const Method DEFAULT_METHOD = NOTICE;
-	static const MethodEx DEFAULT_METHODEX = NONE;
+	static const Method DEFAULT_METHOD                  { NOTICE                                     };
+	static const MethodEx DEFAULT_METHODEX              { NONE                                       };
 
   private:
 	Method meth;                                        // Stream state for current method
@@ -41,26 +41,11 @@ struct Locutor : Stream
 	auto &get_my_nick() const                           { return get_sess().get_nick();              }
 	auto &get_throttle() const                          { return throttle;                           }
 
-	bool operator==(const Locutor &o) const             { return target == o.target;                 }
-	bool operator!=(const Locutor &o) const             { return target != o.target;                 }
-	bool operator<=(const Locutor &o) const             { return target <= o.target;                 }
-	bool operator>=(const Locutor &o) const             { return target >= o.target;                 }
-	bool operator<(const Locutor &o) const              { return target < o.target;                  }
-	bool operator>(const Locutor &o) const              { return target > o.target;                  }
-
-	bool operator==(const std::string &o) const         { return tolower(target) == tolower(o);      }
-	bool operator!=(const std::string &o) const         { return tolower(target) != tolower(o);      }
-	bool operator<=(const std::string &o) const         { return tolower(target) <= tolower(o);      }
-	bool operator>=(const std::string &o) const         { return tolower(target) >= tolower(o);      }
-	bool operator<(const std::string &o) const          { return tolower(target) < tolower(o);       }
-	bool operator>(const std::string &o) const          { return tolower(target) > tolower(o);       }
-
 	void set_target(const std::string &target)          { this->target = target;                     }
 	void reset();
 
   protected:
 	auto &get_throttle()                                { return throttle;                           }
-
 	void msg(const char *const &cmd);
 
   public:
@@ -79,7 +64,7 @@ struct Locutor : Stream
 	void whois();                                       // Sends whois query
 	void mode();                                        // Sends mode query
 
-	Locutor(const std::string &target);
+	explicit Locutor(const std::string &target);
 	virtual ~Locutor() = default;
 };
 
@@ -244,4 +229,88 @@ void Locutor::reset()
 	clear();
 	meth = DEFAULT_METHOD;
 	methex = DEFAULT_METHODEX;
+}
+
+
+inline
+bool operator==(const Locutor &a, const Locutor &b)
+{
+	return a.get_target() == b.get_target();
+}
+
+
+inline
+bool operator!=(const Locutor &a, const Locutor &b)
+{
+	return a.get_target() != b.get_target();
+}
+
+
+inline
+bool operator<=(const Locutor &a, const Locutor &b)
+{
+	return a.get_target() <= b.get_target();
+}
+
+
+inline
+bool operator>=(const Locutor &a, const Locutor &b)
+{
+	return a.get_target() >= b.get_target();
+}
+
+
+inline
+bool operator<(const Locutor &a, const Locutor &b)
+{
+	return a.get_target() < b.get_target();
+}
+
+
+inline
+bool operator>(const Locutor &a, const Locutor &b)
+{
+	return a.get_target() > b.get_target();
+}
+
+
+inline
+bool operator==(const Locutor &a, const std::string &b)
+{
+	return tolower(a.get_target()) == tolower(b);
+}
+
+
+inline
+bool operator!=(const Locutor &a, const std::string &b)
+{
+	return tolower(a.get_target()) != tolower(b);
+}
+
+
+inline
+bool operator<=(const Locutor &a, const std::string &b)
+{
+	return tolower(a.get_target()) <= tolower(b);
+}
+
+
+inline
+bool operator>=(const Locutor &a, const std::string &b)
+{
+	return tolower(a.get_target()) >= tolower(b);
+}
+
+
+inline
+bool operator<(const Locutor &a, const std::string &b)
+{
+	return tolower(a.get_target()) < tolower(b);
+}
+
+
+inline
+bool operator>(const Locutor &a, const std::string &b)
+{
+	return tolower(a.get_target()) > tolower(b);
 }

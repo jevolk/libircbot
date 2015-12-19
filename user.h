@@ -190,7 +190,7 @@ inline
 bool User::is_myself(const Mask &mask)
 const
 {
-	switch(mask.get_form())
+	switch(form(mask))
 	{
 		case Mask::CANONICAL:
 			if(mask.has_all_wild())

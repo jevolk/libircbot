@@ -12,21 +12,21 @@ class AKick
 	std::string oper;
 	std::string reason_pub;
 	std::string reason_priv;
-	time_t expires;                           // Absolute time of expiration (not 'seconds from now')
-	time_t modified;                          // Absolute time of modified (not 'seconds ago')
+	time_t expires;                              // Absolute time of expiration (not 'seconds from now')
+	time_t modified;                             // Absolute time of modified (not 'seconds ago')
 
   public:
 	using Type = Mask::Type;
 
-	auto &get_mask() const                    { return mask;                   }
-	auto &get_oper() const                    { return oper;                   }
-	auto &get_reason_pub() const              { return reason_pub;             }
-	auto &get_reason_priv() const             { return reason_priv;            }
-	auto &get_expires() const                 { return expires;                }
-	auto &get_modified() const                { return modified;               }
+	auto &get_mask() const                       { return mask;                                    }
+	auto &get_oper() const                       { return oper;                                    }
+	auto &get_reason_pub() const                 { return reason_pub;                              }
+	auto &get_reason_priv() const                { return reason_priv;                             }
+	auto &get_expires() const                    { return expires;                                 }
+	auto &get_modified() const                   { return modified;                                }
 
-	bool operator<(const AKick &o) const      { return mask < o.mask;          }
-	bool operator==(const AKick &o) const     { return mask == o.mask;         }
+	bool operator<(const AKick &o) const         { return mask < o.mask;                           }
+	bool operator==(const AKick &o) const        { return mask == o.mask;                          }
 
 	AKick(const Mask &mask,
 	      const std::string &oper,
