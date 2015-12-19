@@ -164,6 +164,7 @@ void Bot::init_irc_handlers()
 	EVENT( RPL_ACCEPTLIST, handle_acceptlist)
 	EVENT( RPL_ENDOFACCEPT, handle_endofaccept)
 	EVENT( RPL_KNOCK, handle_knock)
+	EVENT( RPL_INVITING, handle_inviting)
 
 	EVENT( ERR_MLOCKRESTRICTED, handle_modeislocked)
 	EVENT( ERR_MONLISTFULL, handle_monlistfull)
@@ -1679,6 +1680,17 @@ void Bot::handle_knock(const Msg &msg)
 	using namespace fmt::KNOCK;
 
 	log(msg,"KNOCK");
+
+	Chan &chan(chans.get(msg[CHANNAME]));
+	events.chan(msg,chan);
+}
+
+
+void Bot::handle_inviting(const Msg &msg)
+{
+	using namespace fmt::INVITING;
+
+	log(msg,"INVITING");
 
 	Chan &chan(chans.get(msg[CHANNAME]));
 	events.chan(msg,chan);

@@ -30,6 +30,7 @@ SPQF_FMT( AWAY,              SELFNAME, NICKNAME, MESSAGE                        
 SPQF_FMT( UMODE,             DELTASTR                                                                        )
 SPQF_FMT( UMODEIS,           SELFNAME, DELTASTR                                                              )
 SPQF_FMT( INVITE,            SELFNAME, CHANNAME,                                                             )
+SPQF_FMT( INVITING,          SELFNAME, TARGET,   CHANNAME,                                                   )
 SPQF_FMT( NOTOPIC,           CHANNAME, INFO,                                                                 )
 SPQF_FMT( TOPIC,             CHANNAME, TEXT,                                                                 )
 SPQF_FMT( RPLTOPIC,          SELFNAME, CHANNAME, TEXT,                                                       )

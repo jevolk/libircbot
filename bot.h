@@ -194,6 +194,7 @@ struct Bot : public std::mutex
 	void handle_privmsg(const Msg &m);
 	void handle_notice(const Msg &m);
 	void handle_action(const Msg &m);
+	void handle_inviting(const Msg &m);
 	void handle_knock(const Msg &m);
 	void handle_notopic(const Msg &m);
 	void handle_rpltopic(const Msg &m);
