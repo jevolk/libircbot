@@ -6,7 +6,14 @@
  */
 
 
-extern std::locale locale;   // bot.cpp
+// Manual argument disambiguation
+#define IRCBOT_OVERLOAD(name) \
+	struct name##_t {}; \
+	static constexpr name##_t name {};
+
+
+// bot.cpp externs
+extern std::locale locale;
 
 
 constexpr

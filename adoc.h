@@ -27,9 +27,8 @@ struct Adoc : public boost::property_tree::ptree
 	bool remove(const std::string &key) &;
 	Adoc &merge(const Adoc &src) &;                      // src takes precedence over this
 
-	// Special ctor for key/vals i.e "--foo=bar" to {"foo": "bar"}
-	static constexpr const struct arg_ctor_t {} arg_ctor {};
-	Adoc(arg_ctor_t, const std::string &str, const std::string &keyed = "--", const std::string &valued = "=", const std::string &toksep = " ");
+	IRCBOT_OVERLOAD(arg_ctor)                            // Special ctor "--foo=bar" to {"foo": "bar"}
+	Adoc(arg_ctor_t, const std::string &str, const std::string &keyed  = "--", const std::string &valued = "=", const std::string &toksep = " ");
 
 	// Primary ctors
 	Adoc(const std::string &str = "{}");
