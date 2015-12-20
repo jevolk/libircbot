@@ -342,7 +342,7 @@ void Bot::handle_conn(const boost::system::error_code &e)
 	const std::lock_guard<Bot> lock(*this);
 	set_tls_context();
 	sess.set(Flag::CONNECTED);
-	cancel_timer();
+	set_timeout();
 	new_handle();
 	state_next();
 }
@@ -376,6 +376,7 @@ void Bot::handle_pck(const boost::system::error_code &e,
 		events.msg(msg);
 	}
 
+	set_timeout();
 	set_handle(buf);
 }
 
@@ -410,10 +411,10 @@ void Bot::enter_state_fault(const State &st)
 	log(st,"Entered FAULT");
 
 	auto &sock(sess.get_socket());
+	cancel_timer(true);
 	sock.disconnect(false);
 	sock.clear();
 	sock.purge();
-	cancel_timer(true);
 	sess.unset(Flag::ALL);
 	connect();
 }
