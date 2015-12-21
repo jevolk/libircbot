@@ -43,6 +43,10 @@ class Acct
 	template<class T> void set_val(const std::string &key, const T &t);
 
 	Acct(const std::string *const &acct, Adb *const &adb = bot::adb);
+	Acct(Acct &&) = delete;
+	Acct(const Acct &) = delete;
+	Acct &operator=(Acct &&) = default;
+	Acct &operator=(const Acct &) = default;
 	virtual ~Acct() = default;
 };
 
