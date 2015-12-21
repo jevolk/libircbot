@@ -25,7 +25,9 @@ class AKick
 	auto &get_expires() const                    { return expires;                                 }
 	auto &get_modified() const                   { return modified;                                }
 
-	bool operator<(const AKick &o) const         { return mask < o.mask;                           }
+	explicit operator const Mask &() const       { return get_mask();                              }
+
+	bool operator<(const AKick &o) const         { return mask < std::string(o.mask);              }
 	bool operator==(const AKick &o) const        { return mask == o.mask;                          }
 
 	AKick(const Mask &mask,

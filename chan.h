@@ -339,21 +339,11 @@ Deltas Chan::except(const User &u)
 
 
 inline
-Deltas Chan::unexcept(const User &u)
+Deltas Chan::unexcept(const User &user)
 {
-	Deltas d;
-
-	if(lists.excepts.count(u.mask(Mask::NICK)))
-		d.emplace_back(u.unexcept(Mask::NICK));
-
-	if(lists.excepts.count(u.mask(Mask::HOST)))
-		d.emplace_back(u.unexcept(Mask::HOST));
-
-	if(u.is_logged_in() && lists.excepts.count(u.mask(Mask::ACCT)))
-		d.emplace_back(u.unexcept(Mask::ACCT));
-
-	operator()(d);
-	return d;
+	const auto deltas(compose(lists.excepts,user,"-e"));
+	operator()(deltas);
+	return deltas;
 }
 
 
@@ -372,21 +362,11 @@ Deltas Chan::ban(const User &u)
 
 
 inline
-Deltas Chan::unban(const User &u)
+Deltas Chan::unban(const User &user)
 {
-	Deltas d;
-
-	if(lists.bans.count(u.mask(Mask::NICK)))
-		d.emplace_back(u.unban(Mask::NICK));
-
-	if(lists.bans.count(u.mask(Mask::HOST)))
-		d.emplace_back(u.unban(Mask::HOST));
-
-	if(u.is_logged_in() && lists.bans.count(u.mask(Mask::ACCT)))
-		d.emplace_back(u.unban(Mask::ACCT));
-
-	operator()(d);
-	return d;
+	const auto deltas(compose(lists.bans,user,"-b"));
+	operator()(deltas);
+	return deltas;
 }
 
 
@@ -408,21 +388,11 @@ Deltas Chan::quiet(const User &u)
 
 
 inline
-Deltas Chan::unquiet(const User &u)
+Deltas Chan::unquiet(const User &user)
 {
-	Deltas d;
-
-	if(lists.quiets.count(u.mask(Mask::NICK)))
-		d.emplace_back(u.unquiet(Mask::NICK));
-
-	if(lists.quiets.count(u.mask(Mask::HOST)))
-		d.emplace_back(u.unquiet(Mask::HOST));
-
-	if(u.is_logged_in() && lists.quiets.count(u.mask(Mask::ACCT)))
-		d.emplace_back(u.unquiet(Mask::ACCT));
-
-	operator()(d);
-	return d;
+	const auto deltas(compose(lists.quiets,user,"-q"));
+	operator()(deltas);
+	return deltas;
 }
 
 

@@ -16,22 +16,24 @@ class Flags
   public:
 	using Type = Mask::Type;
 
-	auto &get_mask() const                    { return mask;                     }
-	auto &get_flags() const                   { return flags;                    }
-	auto &get_time() const                    { return time;                     }
-	auto &is_founder() const                  { return founder;                  }
-	bool has(const char &c) const             { return flags.has(c);             }
+	auto &get_mask() const                       { return mask;                                    }
+	auto &get_flags() const                      { return flags;                                   }
+	auto &get_time() const                       { return time;                                    }
+	auto &is_founder() const                     { return founder;                                 }
+	bool has(const char &c) const                { return flags.has(c);                            }
 
-	bool operator<(const Flags &o) const      { return mask < o.mask;            }
-	bool operator<(const Mask &o) const       { return mask < o;                 }
-	bool operator==(const Flags &o) const     { return mask == o.mask;           }
-	bool operator==(const Mask &o) const      { return mask == o;                }
+	explicit operator const Mask &() const       { return get_mask();                              }
+
+	bool operator<(const Flags &o) const         { return mask < std::string(o.mask);              }
+	bool operator<(const Mask &o) const          { return mask < std::string(o);                   }
+	bool operator==(const Flags &o) const        { return mask == o.mask;                          }
+	bool operator==(const Mask &o) const         { return mask == o;                               }
 
 	template<class... Delta> Flags &operator+=(Delta&&... delta) &;
 	template<class... Delta> Flags &operator-=(Delta&&... delta) &;
 
-	bool delta(const std::string &str) &      { return flags.delta(str);         }
-	void update(const time_t &time) &         { this->time = time;               }
+	bool delta(const std::string &str) &         { return flags.delta(str);                        }
+	void update(const time_t &time) &            { this->time = time;                              }
 
 	explicit
 	Flags(const Mask &mask     = Mask(),

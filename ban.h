@@ -19,8 +19,10 @@ class Ban
 	auto &get_oper() const                       { return oper;                                    }
 	auto &get_time() const                       { return time;                                    }
 
-	bool operator<(const Ban &o) const           { return mask < o.mask;                           }
-	bool operator==(const Ban &o) const          { return mask == o.mask;                          }
+	explicit operator const Mask &() const       { return get_mask();                              }
+
+	bool operator<(const Ban &o) const           { return get_mask() < std::string(o.get_mask());  }
+	bool operator==(const Ban &o) const          { return get_mask() == o.get_mask();              }
 
 	Ban(const Mask &mask, const Mask &oper = "", const time_t &time  = 0);
 

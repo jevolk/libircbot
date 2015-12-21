@@ -146,28 +146,28 @@ bool operator!=(const Mask &a, const Mask &b)
 inline
 bool operator<=(const Mask &a, const Mask &b)
 {
-	return tolower(a) <= tolower(b);
+	return a == b || tolower(a) <= tolower(b);
 }
 
 
 inline
 bool operator>=(const Mask &a, const Mask &b)
 {
-	return tolower(a) >= tolower(b);
+	return a == b || tolower(a) >= tolower(b);
 }
 
 
 inline
 bool operator<(const Mask &a, const Mask &b)
 {
-	return tolower(a) < tolower(b);
+	return a != b && tolower(a) < tolower(b);
 }
 
 
 inline
 bool operator>(const Mask &a, const Mask &b)
 {
-	return tolower(a) > tolower(b);
+	return a != b && tolower(a) > tolower(b);
 }
 
 

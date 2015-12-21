@@ -7,6 +7,13 @@
 
 
 template<class Value> using List = std::set<Value>;
+template<class R, class List> using Closure = std::function<R (const typename List::value_type &)>;
+
+template<class List> void for_each(const List &list, const Mask &match, const Closure<void,List> &func);
+template<class List> void for_each(const List &list, const Mask &match, const Closure<bool,List> &func);
+template<class List> Deltas compose(const List &list, const User &user, const Delta &delta);
+template<class List> size_t count(const List &list, const Mask &match);
+
 
 struct Lists
 {
@@ -125,8 +132,7 @@ const
 
 
 inline
-std::ostream &operator<<(std::ostream &s,
-                         const Lists &l)
+std::ostream &operator<<(std::ostream &s, const Lists &l)
 {
 	s << "bans:      \t" << l.bans.size() << std::endl;
 	for(const auto &b : l.bans)
@@ -153,4 +159,57 @@ std::ostream &operator<<(std::ostream &s,
 		s << "\t"<< a << std::endl;
 
 	return s;
+}
+
+
+template<class List>
+size_t count(const List &list,
+             const Mask &match)
+{
+	return std::count(std::begin(list),std::end(list),match);
+}
+
+
+template<class List>
+Deltas compose(const List &list,
+               const User &user,
+               const Delta &delta)
+{
+	Deltas ret;
+	const auto lambda([&ret,&delta]
+	(const auto &element)
+	{
+		ret.emplace_back(string(delta),Mask(element));
+	});
+
+	if(user.is_logged_in())
+		for_each(list,user.mask(Mask::ACCT),lambda);
+
+	for_each(list,user.mask(Mask::NICK),lambda);
+	for_each(list,user.mask(Mask::HOST),lambda);
+
+	return ret;
+}
+
+
+template<class List>
+void for_each(const List &list,
+              const Mask &match,
+              const Closure<void,List> &func)
+{
+	for(const auto &elem : list)
+		if(elem == match)
+			func(elem);
+}
+
+
+template<class List>
+void for_each(const List &list,
+              const Mask &match,
+              const Closure<bool,List> &func)
+{
+	for(const auto &elem : list)
+		if(elem == match)
+			if(!func(elem))
+				return;
 }
