@@ -13,6 +13,7 @@ template<class List> void for_each(const List &list, const Mask &match, const Cl
 template<class List> void for_each(const List &list, const Mask &match, const Closure<bool,List> &func);
 template<class List> Deltas compose(const List &list, const User &user, const Delta &delta);
 template<class List> size_t count(const List &list, const Mask &match);
+template<class List> size_t count(const List &list, const User &user);
 
 
 struct Lists
@@ -164,9 +165,28 @@ std::ostream &operator<<(std::ostream &s, const Lists &l)
 
 template<class List>
 size_t count(const List &list,
+             const User &user)
+{
+	size_t ret(0);
+	ret += count(list,user.mask(Mask::NICK));
+	ret += count(list,user.mask(Mask::HOST));
+
+	if(user.is_logged_in())
+		ret += count(list,user.mask(Mask::ACCT));
+
+	return ret;
+}
+
+
+template<class List>
+size_t count(const List &list,
              const Mask &match)
 {
-	return std::count(std::begin(list),std::end(list),match);
+	return std::count_if(std::begin(list),std::end(list),[&match]
+	(const auto &element)
+	{
+		return Mask(element) == match;
+	});
 }
 
 
