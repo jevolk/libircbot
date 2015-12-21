@@ -482,6 +482,13 @@ std::string packetize(const std::string &str,
 }
 
 
+inline
+char tolower(const char &c)
+{
+	return std::tolower(c,locale);
+}
+
+
 template<size_t SIZE>
 const char *tolower(char (&buf)[SIZE])
 {

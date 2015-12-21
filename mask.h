@@ -97,14 +97,49 @@ bool operator!=(const Mask &a, const Mask::Form &f)
 inline
 bool operator==(const Mask &a, const Mask &b)
 {
-	return tolower(a) == tolower(b);
+	auto ap(0U), bp(0U);
+	while(ap < a.size() && bp < b.size())
+	{
+		const auto ca(tolower(a.at(ap))),  cb(tolower(b.at(bp)));
+		const auto globa(ca == '*'),       globb(cb == '*');
+		const auto wilda(ca == '?'),       wildb(cb == '?');
+
+		if(!globa && !globb && !wilda && !wildb && ca != cb)
+			return false;
+
+		if((globa && ap+1 >= a.size()) || (globb && bp+1 >= b.size()))
+			break;
+
+		if(globa && cb == tolower(a.at(ap+1)))
+			ap += 2;
+
+		if(globb && ca == tolower(b.at(bp+1)))
+			bp += 2;
+
+		if(globa && globb)
+			++ap, ++bp;
+
+		if(!globa)
+			++ap;
+
+		if(!globb)
+			++bp;
+	}
+
+	if(ap < a.size() && !b.empty() && b.back() == '*')
+		return true;
+
+	if(bp < b.size() && !a.empty() && a.back() == '*')
+		return true;
+
+	return std::equal(a.begin()+ap,a.end(),b.begin()+bp,b.end());
 }
 
 
 inline
 bool operator!=(const Mask &a, const Mask &b)
 {
-	return tolower(a) != tolower(b);
+	return !(a == b);
 }
 
 
