@@ -11,14 +11,14 @@ class Stream
 	static thread_local std::ostringstream sbuf;        // bot.cpp
 
   public:
-	static constexpr struct flush_t {} flush {};        // Stream is terminated and sent
+	IRCBOT_OVERLOAD(flush)                              // Stream is terminated and sent
 
-	auto &get_sbuf() const                              { return sbuf;                         }
-	auto has_sbuf() const                               { return !get_sbuf().str().empty();    }
-	auto get_str() const                                { return get_sbuf().str();             }
+	auto &get_sbuf() const                              { return sbuf;                             }
+	auto has_sbuf() const                               { return !get_sbuf().str().empty();        }
+	auto get_str() const                                { return get_sbuf().str();                 }
 
   protected:
-	auto &get_sbuf()                                    { return sbuf;                         }
+	auto &get_sbuf()                                    { return sbuf;                             }
 
   public:
 	static void clear();                                // clear all in sbuf
