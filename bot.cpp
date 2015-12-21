@@ -468,9 +468,6 @@ void Bot::enter_state_registering(const State &st)
 	const Cork cork;
 	Quote("NICK") << sess.get_nick();
 	Quote("USER") << username << " unknown unknown :" << gecos;
-
-	if(opts.has("umode"))
-		Quote("MODE") << sess.get_nick() << " " << opts["umode"];
 }
 
 
@@ -486,6 +483,16 @@ void Bot::enter_state_identifying(const State &st)
 void Bot::enter_state_active(const State &st)
 {
 	log(st,"Entered ACTIVE");
+
+	std::stringstream modes;
+	if(opts.has("as-a-service"))
+		modes << "+Q";
+
+	if(opts.has("umode"))
+		modes << opts["umode"];
+
+	if(!modes.str().empty())
+		Quote("MODE") << sess.get_nick() << " " << modes.str();
 
 	if(!opts.get<bool>("cloaked"))
 		chans.autojoin();
@@ -925,9 +932,16 @@ void Bot::handle_hosthidden(const Msg &msg)
 
 	log(msg,"HOST HIDDEN");
 
+	sess.set(Flag::CLOAKED);
+
 	// Expecting this message, can now join chans.
-	if(opts.get<bool>("cloaked"))
+	if(sess.has_opt("cloaked"))
+	{
 		chans.autojoin();
+
+		if(sess.has_opt("as-a-service"))
+			chans.servicejoin();
+	}
 }
 
 

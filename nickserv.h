@@ -133,7 +133,7 @@ void NickServ::handle_listchans(const Capture &msg)
 	}
 
 	// Automatically join the channels where we have access
-	if(sess.has_opt("as-a-service"))
+	if(sess.has_opt("as-a-service") && (!sess.has_opt("cloaked") || sess.is(CLOAKED)))
 		chans.servicejoin();
 }
 

@@ -13,6 +13,7 @@ enum Flag : uint16_t
 	NEGOTIATED         = 0x0004,         // CAP registration has ended
 	WELCOMED           = 0x0008,         // USER/ircd registration taken place
 	IDENTIFIED         = 0x0010,         // NickServ identification confirmed
+	CLOAKED            = 0x0020,         // Host Hidden confirmed
 
 	// Faults
 	TIMEOUT            = 0x0100,         // Timer expired triggered fault state
