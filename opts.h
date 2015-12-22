@@ -12,8 +12,8 @@ struct Opts : public std::map<std::string,std::string>
 	{
 		// Client info
 		{"nick",                ""                                        },
-		{"user",                "SPQF"                                    },
-		{"gecos",               "Senate & People of Freenode (#SPQF)"     },
+		{"user",                "nobody"                                  },
+		{"gecos",               "noone"                                   },
 
 		// Nickserv identification
 		{"ns-acct",             ""                                        },
@@ -34,7 +34,7 @@ struct Opts : public std::map<std::string,std::string>
 		{"throttle-msg",        "666"   /* milliseconds */                },
 		{"throttle-join",       "333"   /* milliseconds */                },
 		{"as-a-service",        "false"                                   },
-		{"quit-msg",            "Alea iacta est"                          },
+		{"quit-msg",            "Quit"                                    },
 		{"umode",               ""                                        },
 		{"timeout",             "300000" /* milliseconds */               },
 		{"threads",             "1"     /* for BACKGROUND mode */         },
