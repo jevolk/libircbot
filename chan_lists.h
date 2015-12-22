@@ -72,6 +72,9 @@ bool Lists::set_mode(const Delta &d)
 		case 'e':     return bool(d)? excepts.emplace(get<d.MASK>(d)).second:
 		                              excepts.erase(get<d.MASK>(d));
 
+		case 'I':     return bool(d)? invites.emplace(get<d.MASK>(d)).second:
+		                              invites.erase(get<d.MASK>(d));
+
 		default:      return false;
 	}
 }

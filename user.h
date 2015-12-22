@@ -39,6 +39,8 @@ class User : public Locutor,
 
 	Delta unexcept(const Quiet::Type &type) const      { return {"-e",mask(type)};                   }
 	Delta except(const Quiet::Type &type) const        { return {"+e",mask(type)};                   }
+	Delta uninvex(const Quiet::Type &type) const       { return {"-I",mask(type)};                   }
+	Delta invex(const Quiet::Type &type) const         { return {"+I",mask(type)};                   }
 	Delta unquiet(const Quiet::Type &type) const       { return {"-q",mask(type)};                   }
 	Delta quiet(const Quiet::Type &type) const         { return {"+q",mask(type)};                   }
 	Delta unban(const Ban::Type &type) const           { return {"-b",mask(type)};                   }
