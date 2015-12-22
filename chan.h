@@ -354,10 +354,11 @@ inline
 Deltas Chan::except(const User &u)
 {
 	Deltas d;
-	d.emplace_back(u.except(Mask::HOST));
 
 	if(u.is_logged_in())
 		d.emplace_back(u.except(Mask::ACCT));
+	else
+		d.emplace_back(u.except(Mask::HOST));
 
 	operator()(d);
 	return d;
