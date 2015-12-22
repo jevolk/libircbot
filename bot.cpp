@@ -416,7 +416,9 @@ void Bot::enter_state_fault(const State &st)
 	sock.clear();
 	sock.purge();
 	sess.unset(Flag::ALL);
-	connect();
+
+	if(opts.get<bool>("reconnect"))
+		connect();
 }
 
 

@@ -49,6 +49,7 @@ struct Opts : public std::map<std::string,std::string>
 		{"chan-fetch-info",     "true"                                    },
 		{"chan-fetch-lists",    "true"                                    },
 		{"quit",                "true"                                    },
+		{"reconnect",           "true"                                    },
 	}
 	{
 		if(at("locale").empty())
