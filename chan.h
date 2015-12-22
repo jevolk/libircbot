@@ -668,6 +668,8 @@ try
 		case Delta::Type::B: switch(get<d.MODE>(d))
 		{
 			case 'k':
+				_mode += 'k';
+				pass = get<d.MASK>(d);
 				return true;
 
 			default:

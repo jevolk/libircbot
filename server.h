@@ -156,6 +156,7 @@ const
 		case 'v':
 		case 'l':
 		case 'j':
+		case 'k':
 		case 'f':  return true;
 		default:   return false;
 	}
