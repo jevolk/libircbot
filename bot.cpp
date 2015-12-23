@@ -256,7 +256,7 @@ void Bot::set_timer(const milliseconds &ms)
 	if(ms < 0ms)
 		return;
 
-	auto &timer = sess.get_timer();
+	auto &timer(sess.get_timer());
 	timer.expires_from_now(ms);
 	timer.async_wait(std::bind(&Bot::handle_timeout,this,ph::_1));
 }
@@ -374,9 +374,9 @@ void Bot::handle_pck(const boost::system::error_code &e,
 		std::istream stream(buf.get());
 		const Msg msg(stream);
 		events.msg(msg);
+		set_timeout();
 	}
 
-	set_timeout();
 	set_handle(buf);
 }
 
