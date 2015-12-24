@@ -63,7 +63,6 @@ boost::property_tree::ptree([str]
 	return ret;
 }())
 {
-
 }
 catch(const boost::property_tree::json_parser::json_parser_error &e)
 {
@@ -78,7 +77,7 @@ Adoc::Adoc(arg_ctor_t,
            const std::string &valued,
            const std::string &toksep)
 {
-	parse_args(str,keyed,valued,toksep,[&]
+	parse_args(str,keyed,valued,toksep,[this]
 	(const auto &kv)
 	{
 		this->put(kv.first,kv.second);
@@ -90,7 +89,7 @@ inline
 Adoc &Adoc::merge(const Adoc &src)
 &
 {
-	const std::function<void (const Adoc &src, Adoc &dst)> recurse = [&recurse]
+	const std::function<void (const Adoc &src, Adoc &dst)> recurse([&recurse]
 	(const Adoc &src, Adoc &dst)
 	{
 		for(const auto &pair : src)
@@ -113,7 +112,7 @@ Adoc &Adoc::merge(const Adoc &src)
 			else
 				dst.put_child(key,sub);
 		}
-	};
+	});
 
 	recurse(src,*this);
 	return *this;
@@ -198,7 +197,7 @@ inline
 void Adoc::for_each(const std::function<void (const std::string &key, const std::string &val)> &func)
 const
 {
-	recurse([&]
+	recurse([&func]
 	(const std::string &key, const Adoc &doc)
 	{
 		func(key,doc[key]);
@@ -210,7 +209,7 @@ inline
 void Adoc::recurse(const std::function<void (const std::string &key, const Adoc &doc)> &func)
 const
 {
-	const std::function<void (const Adoc &)> re = [&re,&func]
+	const std::function<void (const Adoc &)> re([&re,&func]
 	(const Adoc &doc)
 	{
 		for(const auto &pair : doc)
@@ -220,7 +219,7 @@ const
 			func(key,doc);
 			re(sub);
 		}
-	};
+	});
 
 	re(*this);
 }

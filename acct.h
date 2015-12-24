@@ -36,10 +36,11 @@ class Acct
 	bool has(const std::string &key) const              { return !get_val(key).empty();             }
 
 	// Set document
-	void set(const std::string &key, const Adoc &doc);
 	void set(const Adoc &doc)                           { adb->set(get_acct(),doc);                 }
+	void set(const std::string &key, const Adoc &doc);
 
 	// Convenience for single key => value
+	template<class It> void set_val(const std::string &key, It&& begin, It &&end);
 	template<class T> void set_val(const std::string &key, const T &t);
 
 	Acct(const std::string *const &acct, Adb *const &adb = bot::adb);
@@ -60,14 +61,36 @@ acct(acct)
 }
 
 
+template<> inline
+void Acct::set_val(const std::string &key,
+                   const Adoc &val)
+{
+	Adoc doc(get());
+	doc.put_child(key,val);
+	set(doc);
+}
+
+
 template<class T>
 void Acct::set_val(const std::string &key,
                    const T &t)
 {
-	Adb &adb(get_adb());
-	Adoc doc(adb.get(std::nothrow,get_acct()));
+	Adoc doc(get());
 	doc.put(key,t);
 	set(doc);
+}
+
+
+template<class It>
+void Acct::set_val(const std::string &key,
+                   It&& begin,
+                   It&& end)
+{
+	Adoc doc;
+	for(auto it(begin); it != end; ++it)
+		doc.push(*it);
+
+	set_val(key,doc);
 }
 
 
@@ -75,10 +98,9 @@ inline
 void Acct::set(const std::string &key,
                const Adoc &doc)
 {
-	Adb &adb(get_adb());
 	Adoc main(get());
 	main.put_child(key,doc);
-	adb.set(get_acct(),main);
+	set(main);
 }
 
 
