@@ -213,10 +213,10 @@ bool endswith_any(const std::string &str,
 }
 
 
-inline
+template<class Func>
 void tokens(const std::string &str,
             const char *const &sep,
-            const std::function<void (std::string)> &func)
+            Func&& func)
 {
 	using delim = boost::char_separator<char>;
 
@@ -226,16 +226,56 @@ void tokens(const std::string &str,
 }
 
 
-template<template<class,class>
-         class C = std::vector,
-         class T = std::string,
-         class A = std::allocator<T>>
+template<template<class,
+                  class>
+                  class C = std::vector,
+                  class T = std::string,
+                  class A = std::allocator<T>>
 C<T,A> tokens(const std::string &str,
               const char *const &sep = " ")
 {
 	using delim = boost::char_separator<char>;
 
 	const delim d(sep);
+	const boost::tokenizer<delim> tk(str,d);
+	return {std::begin(tk),std::end(tk)};
+}
+
+
+template<class Sep,
+         class Quo,
+         class Esc,
+         class Func>
+void quokens(const std::string &str,
+             const Sep &sep,
+             const Quo &quo,
+             const Esc &esc,
+             Func&& func)
+{
+	using delim = boost::escaped_list_separator<char>;
+
+	const delim d(esc,sep,quo);
+	const boost::tokenizer<delim> tk(str,d);
+	return std::for_each(std::begin(tk),std::end(tk),func);
+}
+
+
+template<template<class,
+                  class>
+                  class C = std::vector,
+                  class T = std::string,
+                  class A = std::allocator<T>,
+         class Sep = char,
+         class Quo = char,
+         class Esc = char>
+C<T,A> quokens(const std::string &str,
+               const Sep &sep = ' ',
+               const Quo &quo = '"',
+               const Esc &esc = '\\')
+{
+	using delim = boost::escaped_list_separator<char>;
+
+	const delim d(esc,sep,quo);
 	const boost::tokenizer<delim> tk(str,d);
 	return {std::begin(tk),std::end(tk)};
 }
