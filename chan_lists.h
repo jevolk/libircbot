@@ -14,6 +14,8 @@ template<class List> void for_each(const List &list, const Mask &match, const Cl
 template<class List> Deltas compose(const List &list, const User &user, const Delta &delta);
 template<class List> size_t count(const List &list, const Mask &match);
 template<class List> size_t count(const List &list, const User &user);
+template<class List> bool exists(const List &list, const Mask &match);
+template<class List> bool exists(const List &list, const User &user);
 
 
 struct Lists
@@ -25,6 +27,7 @@ struct Lists
 	List<AKick> akicks;
 	List<Flags> flags;
 
+	// Convenience access for the flags list only
 	const Flags &get_flag(const Mask &m) const;
 	const Flags &get_flag(const User &u) const;
 	bool has_flag(const Mask &m) const;
@@ -32,6 +35,11 @@ struct Lists
 	bool has_flag(const Mask &m, const char &flag) const;
 	bool has_flag(const User &u, const char &flag) const;
 
+	// Finds existence of user in appropriate list by letters
+	bool has_mode(const User &u, const char &list) const;
+	bool has_mode(const User &u, const Mode &lists = {"bqeI"}) const;
+
+	// Mutators
 	bool set_mode(const Delta &delta);
 	void delta_flag(const Mask &m, const std::string &delta);
 
@@ -76,6 +84,35 @@ bool Lists::set_mode(const Delta &d)
 		                              invites.erase(get<d.MASK>(d));
 
 		default:      return false;
+	}
+}
+
+
+inline
+bool Lists::has_mode(const User &user,
+                     const Mode &lists)
+const
+{
+	for(const auto &list : lists)
+		if(has_mode(user,list))
+			return true;
+
+	return false;
+}
+
+
+inline
+bool Lists::has_mode(const User &user,
+                     const char &list)
+const
+{
+	switch(list)
+	{
+		case 'b':   return exists(bans,user);
+		case 'q':   return exists(quiets,user);
+		case 'e':   return exists(excepts,user);
+		case 'I':   return exists(invites,user);
+		default:    return false;
 	}
 }
 
@@ -163,6 +200,35 @@ std::ostream &operator<<(std::ostream &s, const Lists &l)
 		s << "\t"<< a << std::endl;
 
 	return s;
+}
+
+
+template<class List>
+bool exists(const List &list,
+            const User &user)
+{
+	if(exists(list,user.mask(Mask::NICK)))
+		return true;
+
+	if(exists(list,user.mask(Mask::HOST)))
+		return true;
+
+	if(user.is_logged_in() && exists(list,user.mask(Mask::ACCT)))
+		return true;
+
+	return false;
+}
+
+
+template<class List>
+bool exists(const List &list,
+            const Mask &match)
+{
+	return std::any_of(std::begin(list),std::end(list),[&match]
+	(const auto &element)
+	{
+		return Mask(element) == match;
+	});
 }
 
 
