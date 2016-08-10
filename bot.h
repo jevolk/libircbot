@@ -22,6 +22,7 @@
 #include <chrono>
 #include <string>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <atomic>
 #include <thread>
