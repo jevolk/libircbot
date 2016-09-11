@@ -85,7 +85,7 @@ const
 	if(!get<d.MASK>(d).empty() && !need_mask(d))
 		return "Mode requires no argument.";
 
-	if(!mode_has_invmask(get<d.MODE>(d)) && get<d.MASK>(d) == Mask::INVALID)
+	if(need_mask(d) && !mode_has_invmask(get<d.MODE>(d)) && get<d.MASK>(d) == Mask::INVALID)
 		return "Mode requires a valid mask argument.";
 
 	switch(get<d.MODE>(d))
