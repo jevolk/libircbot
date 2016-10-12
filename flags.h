@@ -24,6 +24,7 @@ class Flags
 
 	explicit operator const Mask &() const       { return get_mask();                              }
 
+	bool operator!() const                       { return flags.empty();                           }
 	bool operator<(const Flags &o) const         { return mask < std::string(o.mask);              }
 	bool operator<(const Mask &o) const          { return mask < std::string(o);                   }
 	bool operator==(const Flags &o) const        { return mask == o.mask;                          }

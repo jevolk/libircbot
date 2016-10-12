@@ -60,7 +60,11 @@ void Lists::delta_flag(const Mask &mask,
 
 	auto &f(const_cast<Flags &>(*it));
 	f.delta(delta);
-	f.update(time(NULL));
+
+	if(!f)
+		flags.erase(it);
+	else
+		f.update(time(NULL));
 }
 
 
